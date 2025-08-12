@@ -8,11 +8,11 @@
 
 #### **Feature 1: Database Infrastructure**
 **Deliverable:** Working database with all required tables and connections
-- [ ] Install PostgreSQL and set up database
-- [ ] Create database schema (users, schools, classes, students, parents, posts, messages, attendance tables)
-- [ ] Set up JDBC connection
-- [ ] Create basic data access layer (DAO classes)
-- [ ] Test database connectivity and basic CRUD operations
+- [X] Install PostgreSQL and set up database
+- [X] Create database schema (users, schools, classes, students, parents, posts, messages, attendance tables)
+- [X] Set up JDBC connection
+- [X] Create basic data access layer (DAO classes)
+- [X] Test database connectivity and basic CRUD operations
 
 **Acceptance Criteria:** Can connect to database and perform basic operations
 
