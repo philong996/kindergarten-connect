@@ -27,6 +27,24 @@ src/
 │       └── config.properties
 ```
 
+## Architecture overview
+
+```
+┌─────────────────┐
+│   UI Layer      │ ← Swing Components (JFrame, JPanel, JTable)
+│   (View)        │
+├─────────────────┤
+│ Service Layer   │ ← Business Logic (AuthService, StudentService)
+│ (Controller)    │
+├─────────────────┤
+│   DAO Layer     │ ← Data Access (UserDAO, StudentDAO)
+│  (Model)        │
+├─────────────────┤
+│ Database Layer  │ ← PostgreSQL Database
+└─────────────────┘
+```
+
+
 ### **Key Technologies:**
 - **UI:** Java Swing with GroupLayout/BorderLayout
 - **Database:** PostgreSQL with JDBC
@@ -34,6 +52,3 @@ src/
 - **Libraries:** 
   - PostgreSQL JDBC driver
   - BCrypt for password hashing (optional)
-
-
-
