@@ -8,11 +8,11 @@
 
 #### **Feature 1: Database Infrastructure**
 **Deliverable:** Working database with all required tables and connections
-- [X] Install PostgreSQL and set up database
-- [X] Create database schema (users, schools, classes, students, parents, posts, messages, attendance tables)
-- [X] Set up JDBC connection
-- [X] Create basic data access layer (DAO classes)
-- [X] Test database connectivity and basic CRUD operations
+- [x] Install PostgreSQL and set up database
+- [x] Create database schema (users, schools, classes, students, parents, posts, messages, attendance tables)
+- [x] Set up JDBC connection
+- [x] Create basic data access layer (DAO classes)
+- [x] Test database connectivity and basic CRUD operations
 
 **Acceptance Criteria:** Can connect to database and perform basic operations
 
@@ -20,12 +20,12 @@
 
 #### **Feature 2: Authentication System**
 **Deliverable:** Secure login system with role-based access
-- [ ] Implement login screen UI
-- [ ] Create user authentication logic
-- [ ] Implement password validation
-- [ ] Create user session management
-- [ ] Build role-based access control (Principal, Teacher, Parent)
-- [ ] Implement logout functionality
+- [x] Implement login screen UI
+- [x] Create user authentication logic
+- [x] Implement password validation
+- [x] Create user session management
+- [x] Build role-based access control (Principal, Teacher, Parent)
+- [x] Implement logout functionality
 
 **Acceptance Criteria:** Users can log in with different roles and see appropriate dashboards
 
