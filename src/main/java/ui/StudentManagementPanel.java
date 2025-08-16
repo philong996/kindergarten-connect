@@ -2,7 +2,9 @@ package ui;
 
 import model.Student;
 import service.AuthService;
+import service.AuthorizationService;
 import service.StudentService;
+import util.AuthUtil;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -14,11 +16,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Student Management Panel - shows how to use database models in Swing
+ * Student Management Panel - shows how to use database models in Swing with authorization
  */
 public class StudentManagementPanel extends JPanel {
     private StudentService studentService;
     private AuthService authService;
+    private AuthorizationService authorizationService;
     
     // UI Components
     private JTable studentTable;
@@ -38,11 +41,13 @@ public class StudentManagementPanel extends JPanel {
     
     public StudentManagementPanel(AuthService authService) {
         this.authService = authService;
+        this.authorizationService = authService.getAuthorizationService();
         this.studentService = new StudentService();
         
         initializeComponents();
         setupLayout();
         setupEventHandlers();
+        setupPermissions();
         loadStudentData();
     }
     
@@ -184,15 +189,62 @@ public class StudentManagementPanel extends JPanel {
             }
         });
         
-        // Button listeners
-        addButton.addActionListener(e -> addStudent());
-        updateButton.addActionListener(e -> updateStudent());
-        deleteButton.addActionListener(e -> deleteStudent());
+        // Button listeners with authorization checks
+        addButton.addActionListener(e -> {
+            if (AuthUtil.checkPermissionWithMessage(authService, AuthorizationService.PERM_CREATE_STUDENTS, "thêm học sinh")) {
+                addStudent();
+            }
+        });
+        
+        updateButton.addActionListener(e -> {
+            if (AuthUtil.checkPermissionWithMessage(authService, AuthorizationService.PERM_UPDATE_STUDENTS, "cập nhật thông tin học sinh")) {
+                updateStudent();
+            }
+        });
+        
+        deleteButton.addActionListener(e -> {
+            if (AuthUtil.checkPermissionWithMessage(authService, AuthorizationService.PERM_UPDATE_STUDENTS, "xóa học sinh")) {
+                deleteStudent();
+            }
+        });
+        
         refreshButton.addActionListener(e -> loadStudentData());
         searchButton.addActionListener(e -> searchStudents());
         
         // Search field enter key
         searchField.addActionListener(e -> searchStudents());
+    }
+    
+    /**
+     * Setup permissions based on user role
+     */
+    private void setupPermissions() {
+        // Check if user can manage students
+        boolean canManageStudents = AuthUtil.canManageStudents(authService);
+        
+        // Enable/disable buttons based on permissions
+        addButton.setEnabled(canManageStudents);
+        updateButton.setEnabled(false); // Will be enabled when row is selected
+        deleteButton.setEnabled(false); // Will be enabled when row is selected
+        
+        // Disable form fields if user cannot manage students
+        if (!canManageStudents) {
+            nameField.setEditable(false);
+            dobField.setEditable(false);
+            addressField.setEditable(false);
+            classIdField.setEditable(false);
+            
+            // Add tooltip to explain why fields are disabled
+            String tooltip = "Bạn không có quyền chỉnh sửa thông tin học sinh";
+            nameField.setToolTipText(tooltip);
+            dobField.setToolTipText(tooltip);
+            addressField.setToolTipText(tooltip);
+            classIdField.setToolTipText(tooltip);
+        }
+        
+        // Show user role information
+        String userRole = AuthUtil.getRoleDisplayName(authService.getCurrentUser().getRole());
+        setBorder(BorderFactory.createTitledBorder("Quản lý học sinh - " + userRole));
     }
     
     private void loadStudentData() {
@@ -241,23 +293,33 @@ public class StudentManagementPanel extends JPanel {
     private void addStudent() {
         try {
             Student student = createStudentFromForm();
+            
+            // Check if user can access the class they're trying to add student to
+            if (!authorizationService.canAccessClass(student.getClassId())) {
+                JOptionPane.showMessageDialog(this, 
+                    "Bạn không có quyền thêm học sinh vào lớp này.", 
+                    "Không có quyền truy cập", 
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
             if (studentService.addStudent(student)) {
                 JOptionPane.showMessageDialog(this, 
-                    "Student added successfully!", 
-                    "Success", 
+                    "Thêm học sinh thành công!", 
+                    "Thành công", 
                     JOptionPane.INFORMATION_MESSAGE);
                 clearForm();
                 loadStudentData();
             } else {
                 JOptionPane.showMessageDialog(this, 
-                    "Failed to add student.", 
-                    "Error", 
+                    "Không thể thêm học sinh.", 
+                    "Lỗi", 
                     JOptionPane.ERROR_MESSAGE);
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, 
-                "Error: " + e.getMessage(), 
-                "Error", 
+                "Lỗi: " + e.getMessage(), 
+                "Lỗi", 
                 JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -265,8 +327,8 @@ public class StudentManagementPanel extends JPanel {
     private void updateStudent() {
         if (selectedStudent == null) {
             JOptionPane.showMessageDialog(this, 
-                "Please select a student to update.", 
-                "No Selection", 
+                "Vui lòng chọn học sinh để cập nhật.", 
+                "Chưa chọn học sinh", 
                 JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -275,23 +337,41 @@ public class StudentManagementPanel extends JPanel {
             Student updatedStudent = createStudentFromForm();
             updatedStudent.setId(selectedStudent.getId());
             
+            // Check if user can update this specific student
+            if (!authorizationService.canUpdateStudent(selectedStudent.getId())) {
+                JOptionPane.showMessageDialog(this, 
+                    "Bạn không có quyền cập nhật thông tin học sinh này.", 
+                    "Không có quyền truy cập", 
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // Check if user can access the new class they're trying to move student to
+            if (!authorizationService.canAccessClass(updatedStudent.getClassId())) {
+                JOptionPane.showMessageDialog(this, 
+                    "Bạn không có quyền chuyển học sinh vào lớp này.", 
+                    "Không có quyền truy cập", 
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
             if (studentService.updateStudent(updatedStudent)) {
                 JOptionPane.showMessageDialog(this, 
-                    "Student updated successfully!", 
-                    "Success", 
+                    "Cập nhật thông tin học sinh thành công!", 
+                    "Thành công", 
                     JOptionPane.INFORMATION_MESSAGE);
                 clearForm();
                 loadStudentData();
             } else {
                 JOptionPane.showMessageDialog(this, 
-                    "Failed to update student.", 
-                    "Error", 
+                    "Không thể cập nhật thông tin học sinh.", 
+                    "Lỗi", 
                     JOptionPane.ERROR_MESSAGE);
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, 
-                "Error: " + e.getMessage(), 
-                "Error", 
+                "Lỗi: " + e.getMessage(), 
+                "Lỗi", 
                 JOptionPane.ERROR_MESSAGE);
         }
     }

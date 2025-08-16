@@ -8,13 +8,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 /**
- * Principal Dashboard - Main window for Principal users
+ * Principal Page - Main window for Principal users
  */
-public class PrincipalDashboard extends JFrame {
+public class PrincipalPage extends JFrame {
     private AuthService authService;
     private JTabbedPane tabbedPane;
     
-    public PrincipalDashboard(AuthService authService) {
+    public PrincipalPage(AuthService authService) {
         this.authService = authService;
         initializeComponents();
         setupLayout();
@@ -22,7 +22,7 @@ public class PrincipalDashboard extends JFrame {
     }
     
     private void initializeComponents() {
-        setTitle("Kindergarten Management System - Principal Dashboard");
+        setTitle("Kindergarten Management System - Principal Page");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1000, 700);
         setLocationRelativeTo(null);
@@ -135,7 +135,7 @@ public class PrincipalDashboard extends JFrame {
             @Override
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
                 int option = JOptionPane.showConfirmDialog(
-                    PrincipalDashboard.this,
+                    PrincipalPage.this,
                     "Are you sure you want to exit?",
                     "Exit Confirmation",
                     JOptionPane.YES_NO_OPTION

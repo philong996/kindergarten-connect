@@ -6,24 +6,24 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Simple Parent Dashboard placeholder
+ * Simple Parent Page placeholder
  */
-public class ParentDashboard extends JFrame {
+public class ParentPage extends JFrame {
     private AuthService authService;
     
-    public ParentDashboard(AuthService authService) {
+    public ParentPage(AuthService authService) {
         this.authService = authService;
         initializeComponents();
     }
     
     private void initializeComponents() {
-        setTitle("Parent Dashboard");
+        setTitle("Parent Page");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
         setLocationRelativeTo(null);
         
         JPanel panel = new JPanel(new BorderLayout());
-        JLabel label = new JLabel("Parent Dashboard - Coming Soon", SwingConstants.CENTER);
+        JLabel label = new JLabel("Parent Page - Coming Soon", SwingConstants.CENTER);
         label.setFont(new Font("Arial", Font.BOLD, 24));
         
         JButton logoutButton = new JButton("Logout");

@@ -18,6 +18,7 @@ public class LoginWindow extends JFrame {
     
     public LoginWindow() {
         this.authService = new AuthService();
+        this.authService.initializeAuthorization(); // Initialize authorization service
         initializeComponents();
         setupLayout();
         setupEventHandlers();
@@ -169,13 +170,13 @@ public class LoginWindow extends JFrame {
         
         switch (role) {
             case "PRINCIPAL":
-                new PrincipalDashboard(authService).setVisible(true);
+                new PrincipalPage(authService).setVisible(true);
                 break;
             case "TEACHER":
-                new TeacherDashboard(authService).setVisible(true);
+                new TeacherPage(authService).setVisible(true);
                 break;
             case "PARENT":
-                new ParentDashboard(authService).setVisible(true);
+                new ParentPage(authService).setVisible(true);
                 break;
             default:
                 JOptionPane.showMessageDialog(this, 
