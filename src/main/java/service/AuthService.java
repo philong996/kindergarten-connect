@@ -9,9 +9,28 @@ import model.User;
 public class AuthService {
     private UserDAO userDAO;
     private User currentUser;
+    private AuthorizationService authorizationService;
     
     public AuthService() {
         this.userDAO = new UserDAO();
+        // Initialize authorization service after this service is created
+    }
+    
+    /**
+     * Initialize authorization service (called after AuthService is created)
+     */
+    public void initializeAuthorization() {
+        this.authorizationService = new AuthorizationService(this);
+    }
+    
+    /**
+     * Get authorization service
+     */
+    public AuthorizationService getAuthorizationService() {
+        if (authorizationService == null) {
+            initializeAuthorization();
+        }
+        return authorizationService;
     }
     
     /**
