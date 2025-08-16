@@ -1,0 +1,55 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "AuthorizationTestRunner",
+            "request": "launch",
+            "mainClass": "service.AuthorizationTestRunner",
+            "projectName": "StudentManagementApp",
+            "classPaths": ["test"]
+        },
+        {
+            "type": "java",
+            "name": "App",
+            "request": "launch",
+            "mainClass": "App",
+            "projectName": "StudentManagementApp"
+        },
+        {
+            "type": "java",
+            "name": "LoginWindow",
+            "request": "launch",
+            "mainClass": "ui.LoginWindow",
+            "projectName": "StudentManagementApp"
+        },
+        {
+            "type": "java",
+            "name": "StudentManagementApp",
+            "request": "launch",
+            "mainClass": "StudentManagementApp",
+            "projectName": "StudentManagementApp"
+        },
+        {
+            "type": "java",
+            "name": "TestDBConnection",
+            "request": "launch",
+            "mainClass": "util.TestDBConnection",
+            "projectName": "StudentManagementApp"
+        },
+        {
+            "type": "java",
+            "name": "DatabaseInitializer",
+            "request": "launch",
+            "mainClass": "util.DatabaseInitializer",
+            "projectName": "StudentManagementApp"
+        },
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}",
+            "projectName": "StudentManagementApp"
+        }
+    ]
+}

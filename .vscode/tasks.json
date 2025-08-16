@@ -1,0 +1,25 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        // ...existing tasks...
+        {
+            "label": "Run Active Java File",
+            "type": "shell",
+            "command": "java",
+            "args": [
+                "-cp",
+                "lib/postgresql-42.7.4.jar:bin",
+                "${fileBasenameNoExtension}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        }
+    ]
+}
