@@ -39,12 +39,136 @@ This authorization system provides comprehensive role-based access control for t
 
 ## Implementation Architecture
 
+### Design Patterns
+
+The authorization system implements a **Multi-Layered Authorization Architecture** that combines several well-established design patterns for maintainable, secure, and scalable access control:
+
+#### 1. **Dependency Injection Pattern**
+- **Purpose**: Decouples UI components from service implementations
+- **Implementation**: Each UI page receives `AuthService` through constructor injection
+```java
+public class PrincipalPage extends JFrame {
+    private AuthService authService;
+    
+    public PrincipalPage(AuthService authService) {
+        this.authService = authService;  // Injected dependency
+        initializeComponents();
+    }
+}
+```
+- **Benefits**: Enables easy testing, promotes loose coupling, supports different service implementations
+
+#### 2. **Service Layer Pattern**
+- **Purpose**: Separates business logic from presentation layer
+- **Implementation**: 
+  - `AuthService` handles authentication (login/logout/current user state)
+  - `AuthorizationService` manages permissions and role-based access control
+- **Benefits**: Centralized business logic, reusable across different UI components
+
+#### 3. **Facade Pattern**
+- **Purpose**: Provides simplified interface to complex authorization subsystem
+- **Implementation**: `AuthService` acts as a facade providing unified access
+```java
+public class AuthService {
+    public AuthorizationService getAuthorizationService() {
+        if (authorizationService == null) {
+            initializeAuthorization();
+        }
+        return authorizationService;
+    }
+}
+```
+- **Benefits**: Hides complexity, provides single entry point, manages initialization
+
+#### 4. **Strategy Pattern**
+- **Purpose**: Implements different permission strategies for different user roles
+- **Implementation**: Role-based permission sets with pluggable strategies
+```java
+private boolean hasPermissionForRole(String role, String permission) {
+    switch (role) {
+        case "PRINCIPAL": return getPrincipalPermissions().contains(permission);
+        case "TEACHER": return getTeacherPermissions().contains(permission);
+        case "PARENT": return getParentPermissions().contains(permission);
+    }
+}
+```
+- **Benefits**: Easy to add new roles, modify permissions, supports role hierarchy
+
+#### 5. **Utility/Helper Pattern**
+- **Purpose**: Provides common authorization operations with UI integration
+- **Implementation**: `AuthUtil` class with static convenience methods
+```java
+public class AuthUtil {
+    public static boolean checkPermissionWithMessage(AuthService authService, 
+                                                   String permission, String action) {
+        // Check permission and show localized error message if unauthorized
+    }
+    
+    public static boolean canManageStudents(AuthService authService) {
+        return authService.getAuthorizationService()
+                         .hasPermission(AuthorizationService.PERM_UPDATE_STUDENTS);
+    }
+}
+```
+- **Benefits**: Reduces code duplication, consistent error messages, UI-aware authorization
+
+#### 6. **Template Method Pattern**
+- **Purpose**: Defines consistent authorization algorithm structure across all UI pages
+- **Implementation**: Abstract base class `BaseAuthenticatedPage` with template method `initializePage()`
+```java
+public abstract class BaseAuthenticatedPage extends JFrame {
+    // Template method - defines the algorithm structure (final to prevent override)
+    private final void initializePage() {
+        initializeWindowProperties();    // Common behavior
+        initializeComponents();          // Hook method - subclass specific
+        setupLayout();                   // Hook method - subclass specific
+        setupPermissions();              // Hook method - subclass specific
+        setupEventHandlers();            // Hook method - subclass specific
+        setupCommonWindowBehavior();     // Common behavior
+        loadInitialData();               // Hook method - optional
+    }
+    
+    // Hook methods for subclasses to implement
+    protected abstract String getPageTitle();
+    protected abstract Dimension getWindowSize();
+    protected abstract void initializeComponents();
+    protected abstract void setupLayout();
+    protected abstract void setupPermissions();
+    protected abstract void setupEventHandlers();
+    
+    // Common methods available to all subclasses
+    protected final void performLogout() { /* ... */ }
+    protected final String getCurrentUserRoleDisplay() { /* ... */ }
+}
+```
+- **Benefits**: Enforces consistent initialization flow, prevents code duplication, ensures authorization setup
+
+#### 7. **Factory Method Pattern**
+- **Purpose**: Creates appropriate page instances based on user role without exposing instantiation logic
+- **Implementation**: Static factory method in base class
+```java
+public static JFrame createPageForRole(AuthService authService) {
+    String role = authService.getCurrentUser().getRole();
+    switch (role) {
+        case "PRINCIPAL": return new PrincipalPage(authService);
+        case "TEACHER": return new TeacherPage(authService);
+        case "PARENT": return new ParentPage(authService);
+        default: throw new IllegalArgumentException("Unknown user role: " + role);
+    }
+}
+
+// Usage in LoginWindow
+JFrame mainPage = BaseAuthenticatedPage.createPageForRole(authService);
+mainPage.setVisible(true);
+```
+- **Benefits**: Centralized page creation logic, easy to add new roles, type-safe instantiation
+
 ### Core Classes
 
-1. **AuthorizationService** - Main authorization logic
-2. **AuthUtil** - UI utility functions for permission checking
-3. **AuthorizationDAO** - Database queries for authorization
-4. **AuthService** - Enhanced with authorization integration
+1. **AuthorizationService** - Main authorization logic implementing Strategy pattern
+2. **AuthUtil** - UI utility functions implementing Helper pattern
+3. **AuthorizationDAO** - Database queries for authorization data
+4. **AuthService** - Authentication service acting as Facade to authorization
 
 ### Permission Constants
 
@@ -191,18 +315,72 @@ posts.class_id -> classes.id
 
 ## Integration Points
 
-### 1. UI Components
-- All management panels check permissions before enabling actions
-- Form fields are disabled for users without edit permissions
-- Buttons show/hide based on user capabilities
+### 1. UI Components - Template Method Pattern
+- All page classes extend `BaseAuthenticatedPage` which enforces consistent authorization flow:
+  1. **Template Method**: `initializePage()` defines the algorithm structure
+  2. **Hook Methods**: Subclasses implement `setupPermissions()`, `initializeComponents()`, etc.
+  3. **Common Behavior**: Logout, window closing, role display handled by base class
+  4. **Role Validation**: Each page can override `validateUserRole()` for additional security
 
-### 2. Service Layer
-- Business logic validates permissions before database operations
-- Throws security exceptions for unauthorized access attempts
+```java
+public class PrincipalPage extends BaseAuthenticatedPage {
+    @Override
+    protected void setupPermissions() {
+        // Template method ensures this is called at the right time
+        String roleDisplay = getCurrentUserRoleDisplay();
+        // ... configure UI based on principal permissions
+    }
+    
+    @Override
+    protected boolean validateUserRole() {
+        return authService.isPrincipal(); // Additional role validation
+    }
+}
+```
 
-### 3. Data Access Layer
-- DAO methods include user context in queries
-- Automatic filtering based on school and class access rights
+### 2. Service Layer - Strategy + Facade Patterns
+- **Facade**: `AuthService` provides simplified access to authorization
+- **Strategy**: Different permission strategies per role
+- **Validation**: Business logic validates permissions before database operations
+
+```java
+// Service layer authorization example
+public boolean updateStudent(Student student) {
+    // Strategy pattern - role-based permission check
+    if (!authorizationService.canUpdateStudent(student.getId())) {
+        throw new SecurityException(authorizationService.getUnauthorizedMessage("cập nhật học sinh"));
+    }
+    
+    // Class access validation
+    if (!authorizationService.canAccessClass(student.getClassId())) {
+        throw new SecurityException("Không có quyền truy cập lớp này");
+    }
+    
+    // Proceed with authorized operation
+    return studentDAO.update(student);
+}
+```
+
+### 3. Data Access Layer - Strategy Pattern
+- **Context-Aware Queries**: DAO methods include user context for automatic filtering
+- **School Isolation**: Queries automatically filter by user's school
+- **Class-Level Security**: Access restricted to authorized classes only
+
+```java
+// DAO with authorization context
+public List<Student> getStudentsForUser(User user) {
+    switch (user.getRole()) {
+        case "PRINCIPAL":
+            return getStudentsBySchool(user.getSchoolId());
+        case "TEACHER":
+            return getStudentsByTeacherClass(user.getId());
+        case "PARENT":
+            return getStudentsByParent(user.getId());
+        default:
+            return Collections.emptyList();
+    }
+}
+```
 
 ## Error Handling
 
@@ -225,39 +403,216 @@ IllegalArgumentException - For invalid access attempts
 
 ## Best Practices
 
-### 1. Always Check Permissions
+### 1. Always Use Dependency Injection for Authorization
 ```java
-// Good - Check permission before action
-if (authUtil.hasPermission(PERM_CREATE_STUDENTS)) {
-    createStudent();
+// Good - Proper dependency injection
+public class StudentManagementPanel extends JPanel {
+    private AuthService authService;
+    private AuthorizationService authorizationService;
+    
+    public StudentManagementPanel(AuthService authService) {
+        this.authService = authService;
+        this.authorizationService = authService.getAuthorizationService();
+        setupPermissions();
+    }
 }
 
-// Bad - Assume user has permission
-createStudent(); // Could fail with security exception
+// Bad - Direct instantiation breaks testability
+public class BadExample extends JPanel {
+    private AuthService authService = new AuthService(); // Hard to test/mock
+}
 ```
 
-### 2. Use Utility Methods
+### 2. Follow Template Method Pattern for UI Authorization
 ```java
-// Good - Use utility for common checks
-AuthUtil.checkPermissionWithMessage(authService, permission, action);
+// Good - Extend BaseAuthenticatedPage for consistent authorization
+public class NewRolePage extends BaseAuthenticatedPage {
+    public NewRolePage(AuthService authService) {
+        super(authService); // Template method automatically called
+    }
+    
+    @Override
+    protected void setupPermissions() {
+        // This method guaranteed to be called at the right time in initialization
+        boolean canManage = AuthUtil.canManageStudents(authService);
+        configureUIBasedOnPermissions(canManage);
+    }
+    
+    @Override
+    protected boolean validateUserRole() {
+        return authService.hasRole("NEW_ROLE");
+    }
+}
 
-// Bad - Manual permission checking
-if (!authService.getAuthorizationService().hasPermission(permission)) {
-    JOptionPane.showMessageDialog(...);
+// Bad - Direct JFrame extension without template structure
+public class BadPage extends JFrame {
+    // Scattered initialization, no guaranteed authorization setup
+}
+```
+
+### 3. Use Utility Methods for Common Authorization Patterns
+```java
+// Good - Use AuthUtil for common patterns
+if (AuthUtil.checkPermissionWithMessage(authService, 
+        AuthorizationService.PERM_CREATE_STUDENTS, "thêm học sinh")) {
+    addStudent();
+}
+
+// Bad - Manual permission checking with repeated code
+if (!authService.getAuthorizationService().hasPermission(PERM_CREATE_STUDENTS)) {
+    JOptionPane.showMessageDialog(this, "Không có quyền thêm học sinh", 
+                                 "Lỗi", JOptionPane.ERROR_MESSAGE);
     return;
 }
 ```
 
-### 3. Initialize Authorization Early
+### 4. Implement Proper Separation of Concerns
 ```java
-// In LoginWindow or main application initialization
-authService = new AuthService();
-authService.initializeAuthorization();
+// Good - UI delegates to service layer
+addButton.addActionListener(e -> {
+    if (AuthUtil.canManageStudents(authService)) {
+        studentService.addStudent(createStudentFromForm()); // Service handles business logic
+    }
+});
+
+// Bad - UI contains business logic
+addButton.addActionListener(e -> {
+    if (authService.hasRole("PRINCIPAL") || authService.hasRole("TEACHER")) {
+        // Business logic mixed with UI
+        Student student = new Student();
+        // ... complex business logic in UI
+    }
+});
 ```
 
-### 4. Handle Edge Cases
-- Check for null users
-- Validate class and student IDs
-- Handle database connection failures gracefully
+### 5. Use Strategy Pattern for Role-Based Logic
+```java
+// Good - Strategy pattern for role-specific behavior
+public List<Student> getAccessibleStudents() {
+    return authorizationService.getStudentsForCurrentUser();
+}
+
+// Bad - Role checking scattered throughout code
+public List<Student> getStudents() {
+    if (authService.isPrincipal()) {
+        return studentDAO.getAllStudents();
+    } else if (authService.isTeacher()) {
+        return studentDAO.getStudentsByTeacher(authService.getCurrentUser().getId());
+    }
+    // ... repeated role checking logic
+}
+```
+
+### 6. Use Factory Method for Page Creation
+```java
+// Good - Use factory method for role-based page creation
+JFrame mainPage = BaseAuthenticatedPage.createPageForRole(authService);
+mainPage.setVisible(true);
+
+// Bad - Manual role checking and instantiation
+switch (authService.getCurrentUser().getRole()) {
+    case "PRINCIPAL": new PrincipalPage(authService).setVisible(true); break;
+    case "TEACHER": new TeacherPage(authService).setVisible(true); break;
+    // Repetitive and error-prone
+}
+```
+
+### 7. Implement Template Method Pattern Correctly
+```java
+// Good - Proper template method implementation
+public abstract class BaseAuthenticatedPage extends JFrame {
+    // Template method (final - cannot be overridden)
+    private final void initializePage() {
+        initializeWindowProperties();
+        initializeComponents();     // Hook method
+        setupLayout();             // Hook method
+        setupPermissions();        // Hook method - ensures authorization setup
+        setupEventHandlers();      // Hook method
+        setupCommonWindowBehavior();
+        loadInitialData();         // Hook method
+    }
+}
+
+// Bad - No template structure, inconsistent initialization
+public class InconsistentPage extends JFrame {
+    // Constructor might forget to call setupPermissions()
+    // No guaranteed order of initialization
+}
+```
+
+### 8. Initialize Authorization Properly with Facade Pattern
+```java
+// Good - Proper initialization using facade
+authService = new AuthService();
+authService.initializeAuthorization(); // Facade handles complex initialization
+
+// Bad - Manual management of dependencies
+authService = new AuthService();
+authorizationService = new AuthorizationService(authService);
+authService.setAuthorizationService(authorizationService);
+```
+
+### 9. Handle Edge Cases Gracefully
+```java
+// Good - Defensive programming with proper error handling
+public boolean canAccessStudent(int studentId) {
+    if (!authService.isLoggedIn()) {
+        return false;
+    }
+    
+    User currentUser = authService.getCurrentUser();
+    if (currentUser == null) {
+        return false;
+    }
+    
+    return authorizationService.canUpdateStudent(studentId);
+}
+
+// Bad - Assuming valid state
+public boolean canAccessStudent(int studentId) {
+    return authorizationService.canUpdateStudent(studentId); // NPE if not logged in
+}
+```
+
+### 10. Use Permission Constants Instead of Magic Strings
+```java
+// Good - Use defined constants
+if (authorizationService.hasPermission(AuthorizationService.PERM_CREATE_STUDENTS)) {
+    // ...
+}
+
+// Bad - Magic strings prone to typos
+if (authorizationService.hasPermission("CREATE_STUDENTS")) {
+    // Typos not caught at compile time
+}
+```
+
+### Design Pattern Benefits
+
+#### **Maintainability**
+- **Single Responsibility**: Each class has one clear purpose (AuthService for auth, AuthorizationService for permissions)
+- **Open/Closed Principle**: Easy to add new roles without modifying existing code
+- **Template Method**: Enforces consistent initialization and authorization setup across all pages
+- **Factory Method**: Centralized page creation logic, easy to extend for new roles
+
+#### **Testability**
+- **Dependency Injection**: Services can be easily mocked for unit testing
+- **Separation of Concerns**: Business logic can be tested independently of UI
+- **Strategy Pattern**: Each role's permissions can be tested in isolation
+
+#### **Scalability**
+- **Strategy Pattern**: Adding new roles is simply adding new permission strategies
+- **Facade Pattern**: Complex authorization logic hidden behind simple interface
+- **Service Layer**: Business logic reusable across different UI frameworks
+
+#### **Security**
+- **Centralized Authorization**: All permission logic in one place reduces security gaps
+- **Fail-Safe Defaults**: UI components disable features by default, enable only when authorized
+- **Multi-Layer Validation**: Permissions checked at both UI and service layers
+
+#### **User Experience**
+- **Graceful Degradation**: Features disabled rather than hidden, with helpful tooltips
+- **Localized Messages**: AuthUtil provides Vietnamese error messages appropriate to user context
+- **Role-Aware UI**: Interface adapts to show user's role and capabilities
 
 This authorization system ensures that each user type can only access and modify data appropriate to their role, maintaining security and data integrity throughout the kindergarten management application.

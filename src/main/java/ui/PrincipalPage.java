@@ -9,45 +9,76 @@ import java.awt.event.ActionListener;
 
 /**
  * Principal Page - Main window for Principal users
+ * Implements Template Method pattern via BaseAuthenticatedPage
  */
-public class PrincipalPage extends JFrame {
-    private AuthService authService;
+public class PrincipalPage extends BaseAuthenticatedPage {
     private JTabbedPane tabbedPane;
+    private JMenuBar menuBar;
+    private JPanel headerPanel;
+    private JPanel statusPanel;
     
     public PrincipalPage(AuthService authService) {
-        this.authService = authService;
-        initializeComponents();
-        setupLayout();
-        setupEventHandlers();
+        super(authService);
     }
     
-    private void initializeComponents() {
-        setTitle("Kindergarten Management System - Principal Page");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1000, 700);
-        setLocationRelativeTo(null);
-        
+    @Override
+    protected String getPageTitle() {
+        return "Kindergarten Management System - Principal Page";
+    }
+    
+    @Override
+    protected Dimension getWindowSize() {
+        return new Dimension(1000, 700);
+    }
+    
+    @Override
+    protected void initializeComponents() {
         tabbedPane = new JTabbedPane();
+        menuBar = createMenuBar();
+        headerPanel = createHeaderPanel();
+        statusPanel = createStatusPanel();
     }
     
-    private void setupLayout() {
+    @Override
+    protected void setupLayout() {
         setLayout(new BorderLayout());
         
-        // Create menu bar
-        JMenuBar menuBar = createMenuBar();
+        // Set menu bar
         setJMenuBar(menuBar);
         
-        // Create header panel
-        JPanel headerPanel = createHeaderPanel();
+        // Add header panel
         add(headerPanel, BorderLayout.NORTH);
         
         // Create tabbed pane with different management panels
         createTabs();
         add(tabbedPane, BorderLayout.CENTER);
         
-        // Create status bar
-        JPanel statusPanel = createStatusPanel();
+        // Add status bar
         add(statusPanel, BorderLayout.SOUTH);
+    }
+    
+    @Override
+    protected void setupPermissions() {
+        // Principal has full access - no restrictions needed
+        // All tabs and features should be available
+        String roleDisplay = getCurrentUserRoleDisplay();
+        
+        // Update header to show role
+        JLabel userLabel = new JLabel("Chào mừng " + roleDisplay + " - " + authService.getCurrentUser().getUsername());
+        userLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        userLabel.setForeground(Color.WHITE);
+        headerPanel.add(userLabel, BorderLayout.EAST);
+    }
+    
+    @Override
+    protected void setupEventHandlers() {
+        // Event handlers are set up in createMenuBar() and createTabs()
+        // Override window closing to use base class behavior
+    }
+    
+    @Override
+    protected boolean validateUserRole() {
+        return authService.isPrincipal();
     }
     
     private JMenuBar createMenuBar() {
@@ -58,7 +89,7 @@ public class PrincipalPage extends JFrame {
         JMenuItem logoutItem = new JMenuItem("Logout");
         JMenuItem exitItem = new JMenuItem("Exit");
         
-        logoutItem.addActionListener(e -> logout());
+        logoutItem.addActionListener(e -> performLogout());
         exitItem.addActionListener(e -> System.exit(0));
         
         fileMenu.add(logoutItem);
@@ -87,12 +118,7 @@ public class PrincipalPage extends JFrame {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setForeground(Color.WHITE);
         
-        JLabel userLabel = new JLabel("Welcome, " + authService.getCurrentUser().getUsername());
-        userLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        userLabel.setForeground(Color.WHITE);
-        
         headerPanel.add(titleLabel, BorderLayout.WEST);
-        headerPanel.add(userLabel, BorderLayout.EAST);
         
         return headerPanel;
     }
@@ -126,40 +152,6 @@ public class PrincipalPage extends JFrame {
         statusPanel.add(statusLabel);
         
         return statusPanel;
-    }
-    
-    private void setupEventHandlers() {
-        // Window closing event
-        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                int option = JOptionPane.showConfirmDialog(
-                    PrincipalPage.this,
-                    "Are you sure you want to exit?",
-                    "Exit Confirmation",
-                    JOptionPane.YES_NO_OPTION
-                );
-                if (option == JOptionPane.YES_OPTION) {
-                    System.exit(0);
-                }
-            }
-        });
-    }
-    
-    private void logout() {
-        int option = JOptionPane.showConfirmDialog(
-            this,
-            "Are you sure you want to logout?",
-            "Logout Confirmation",
-            JOptionPane.YES_NO_OPTION
-        );
-        
-        if (option == JOptionPane.YES_OPTION) {
-            authService.logout();
-            dispose();
-            new LoginWindow().setVisible(true);
-        }
     }
     
     private void showAbout() {

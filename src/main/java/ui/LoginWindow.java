@@ -166,23 +166,15 @@ public class LoginWindow extends JFrame {
     }
     
     private void openMainWindow() {
-        String role = authService.getCurrentUser().getRole();
-        
-        switch (role) {
-            case "PRINCIPAL":
-                new PrincipalPage(authService).setVisible(true);
-                break;
-            case "TEACHER":
-                new TeacherPage(authService).setVisible(true);
-                break;
-            case "PARENT":
-                new ParentPage(authService).setVisible(true);
-                break;
-            default:
-                JOptionPane.showMessageDialog(this, 
-                    "Unknown user role: " + role, 
-                    "Error", 
-                    JOptionPane.ERROR_MESSAGE);
+        try {
+            // Use factory method to create appropriate page
+            JFrame mainPage = BaseAuthenticatedPage.createPageForRole(authService);
+            mainPage.setVisible(true);
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, 
+                "Unknown user role: " + authService.getCurrentUser().getRole(), 
+                "Error", 
+                JOptionPane.ERROR_MESSAGE);
         }
     }
     
