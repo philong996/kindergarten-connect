@@ -40,22 +40,25 @@ public abstract class BaseAuthenticatedPage extends JFrame {
         // Step 1: Initialize basic window properties
         initializeWindowProperties();
         
-        // Step 2: Create UI components (hook method)
+        // Step 2: Create and set menu bar
+        setJMenuBar(createStandardMenuBar());
+        
+        // Step 3: Create UI components (hook method)
         initializeComponents();
         
-        // Step 3: Setup layout (hook method)
+        // Step 4: Setup layout (hook method)
         setupLayout();
         
-        // Step 4: Setup authorization-based permissions (hook method)
+        // Step 5: Setup authorization-based permissions (hook method)
         setupPermissions();
         
-        // Step 5: Setup event handlers (hook method)
+        // Step 6: Setup event handlers (hook method)
         setupEventHandlers();
         
-        // Step 6: Setup common window behavior
+        // Step 7: Setup common window behavior
         setupCommonWindowBehavior();
         
-        // Step 7: Load initial data if needed (hook method)
+        // Step 8: Load initial data if needed (hook method)
         loadInitialData();
     }
     
@@ -132,6 +135,58 @@ public abstract class BaseAuthenticatedPage extends JFrame {
         return AuthUtil.checkPermissionWithMessage(authService, permission, action);
     }
     
+    /**
+     * Create standardized menu bar for all pages
+     */
+    protected JMenuBar createStandardMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+        
+        // File menu
+        JMenu fileMenu = new JMenu("File");
+        JMenuItem logoutItem = new JMenuItem("Logout");
+        JMenuItem exitItem = new JMenuItem("Exit");
+        
+        logoutItem.addActionListener(e -> performLogout());
+        exitItem.addActionListener(e -> System.exit(0));
+        
+        fileMenu.add(logoutItem);
+        fileMenu.addSeparator();
+        fileMenu.add(exitItem);
+        
+        // Help menu
+        JMenu helpMenu = new JMenu("Help");
+        JMenuItem aboutItem = new JMenuItem("About");
+        
+        aboutItem.addActionListener(e -> showAbout());
+        helpMenu.add(aboutItem);
+        
+        menuBar.add(fileMenu);
+        menuBar.add(helpMenu);
+        
+        // Allow subclasses to add custom menus
+        customizeMenuBar(menuBar);
+        
+        return menuBar;
+    }
+    
+    /**
+     * Show standard about dialog
+     */
+    protected void showAbout() {
+        JOptionPane.showMessageDialog(
+            this,
+            "Kindergarten Management System\n" +
+            "Version 1.0\n" +
+            "Developed for educational purposes\n\n" +
+            "Features:\n" +
+            "- Student Management\n" +
+            "- User Authentication\n" +
+            "- Role-based Access Control",
+            "About",
+            JOptionPane.INFORMATION_MESSAGE
+        );
+    }
+    
     // ===============================
     // HOOK METHODS - TO BE IMPLEMENTED BY SUBCLASSES
     // ===============================
@@ -144,9 +199,12 @@ public abstract class BaseAuthenticatedPage extends JFrame {
     
     /**
      * Hook method: Get the window size
+     * Default implementation provides a standard size that can be overridden
      * @return The preferred size for this window
      */
-    protected abstract java.awt.Dimension getWindowSize();
+    protected java.awt.Dimension getWindowSize() {
+        return new java.awt.Dimension(1200, 800);
+    }
     
     /**
      * Hook method: Initialize UI components
@@ -179,6 +237,15 @@ public abstract class BaseAuthenticatedPage extends JFrame {
      */
     protected void loadInitialData() {
         // Default: no data loading
+    }
+    
+    /**
+     * Hook method: Customize menu bar
+     * Subclasses can override to add role-specific menu items
+     * Default implementation does nothing
+     */
+    protected void customizeMenuBar(JMenuBar menuBar) {
+        // Default: no customization
     }
     
     /**

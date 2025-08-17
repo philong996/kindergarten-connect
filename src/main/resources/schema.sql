@@ -110,6 +110,23 @@ CREATE TABLE attendance (
 );
 
 -- =====================================================
+-- PHYSICAL DEVELOPMENT TRACKING
+-- =====================================================
+
+-- Physical Development Records (Height, Weight tracking)
+CREATE TABLE physical_development_records (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES students(id),
+    height_cm DECIMAL(5,2) NOT NULL, -- Height in centimeters (e.g., 105.50)
+    weight_kg DECIMAL(5,2) NOT NULL, -- Weight in kilograms (e.g., 18.75)
+    bmi DECIMAL(5,2) GENERATED ALWAYS AS (weight_kg / POWER(height_cm / 100, 2)) STORED,
+    measurement_date DATE NOT NULL,
+    recorded_by INTEGER NOT NULL REFERENCES users(id), -- Teacher who recorded
+    notes TEXT, -- Optional notes from teacher
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =====================================================
 -- BASIC INDEXES FOR PERFORMANCE
 -- =====================================================
 
@@ -120,6 +137,7 @@ CREATE INDEX idx_parents_student_id ON parents(student_id);
 CREATE INDEX idx_posts_class_id ON posts(class_id);
 CREATE INDEX idx_attendance_student_date ON attendance(student_id, date);
 CREATE INDEX idx_messages_receiver ON messages(receiver_id);
+CREATE INDEX idx_physical_records_student_date ON physical_development_records(student_id, measurement_date);
 
 -- =====================================================
 -- SAMPLE DATA FOR TESTING
@@ -164,6 +182,18 @@ INSERT INTO attendance (student_id, date, status, check_in_time) VALUES
 (2, CURRENT_DATE, 'LATE', '08:45:00'),
 (3, CURRENT_DATE, 'ABSENT', NULL);
 
+-- Insert sample physical development records
+INSERT INTO physical_development_records (student_id, height_cm, weight_kg, measurement_date, recorded_by, notes) VALUES
+(1, 105.50, 18.75, '2024-01-15', 2, 'Regular growth check'),
+(1, 107.20, 19.30, '2024-04-15', 2, 'Good growth progress'),
+(1, 109.00, 19.80, '2024-08-15', 2, 'Healthy development'),
+(2, 103.80, 17.90, '2024-01-15', 2, 'Initial measurement'),
+(2, 105.40, 18.45, '2024-04-15', 2, 'Normal growth'),
+(2, 107.10, 18.95, '2024-08-15', 2, 'Steady progress'),
+(3, 108.20, 20.15, '2024-01-15', 2, 'Above average height'),
+(3, 110.50, 20.80, '2024-04-15', 2, 'Continued good growth'),
+(3, 112.30, 21.40, '2024-08-15', 2, 'Excellent development');
+
 -- =====================================================
 -- SIMPLE VIEWS FOR COMMON QUERIES
 -- =====================================================
@@ -194,6 +224,33 @@ FROM attendance a
 JOIN students s ON a.student_id = s.id
 JOIN classes c ON s.class_id = c.id
 ORDER BY a.date DESC;
+
+-- View for physical development summary
+CREATE VIEW physical_development_summary AS
+SELECT 
+    pdr.id,
+    s.id AS student_id,
+    s.name AS student_name,
+    s.dob,
+    pdr.height_cm,
+    pdr.weight_kg,
+    pdr.bmi,
+    pdr.measurement_date,
+    pdr.recorded_by,
+    u.username AS recorded_by_teacher,
+    pdr.notes,
+    pdr.created_at,
+    -- Calculate age at measurement
+    EXTRACT(YEAR FROM AGE(pdr.measurement_date, s.dob)) AS age_years,
+    EXTRACT(MONTH FROM AGE(pdr.measurement_date, s.dob)) % 12 AS age_months,
+    -- Previous measurement for comparison
+    LAG(pdr.height_cm) OVER (PARTITION BY s.id ORDER BY pdr.measurement_date) AS prev_height,
+    LAG(pdr.weight_kg) OVER (PARTITION BY s.id ORDER BY pdr.measurement_date) AS prev_weight,
+    LAG(pdr.bmi) OVER (PARTITION BY s.id ORDER BY pdr.measurement_date) AS prev_bmi
+FROM physical_development_records pdr
+JOIN students s ON pdr.student_id = s.id
+JOIN users u ON pdr.recorded_by = u.id
+ORDER BY s.id, pdr.measurement_date DESC;
 
 -- =====================================================
 -- COMMENTS

@@ -2,7 +2,6 @@ package ui;
 
 import service.AuthService;
 import ui.components.HeaderPanel;
-import ui.components.DialogFactory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,7 +13,6 @@ import java.awt.*;
  */
 public class PrincipalPage extends BaseAuthenticatedPage {
     private JTabbedPane tabbedPane;
-    private JMenuBar menuBar;
     private HeaderPanel headerPanel;
     private JPanel statusPanel;
     
@@ -28,14 +26,8 @@ public class PrincipalPage extends BaseAuthenticatedPage {
     }
     
     @Override
-    protected Dimension getWindowSize() {
-        return new Dimension(1000, 700);
-    }
-    
-    @Override
     protected void initializeComponents() {
         tabbedPane = new JTabbedPane();
-        menuBar = createMenuBar();
         headerPanel = HeaderPanel.createDashboard("Principal", authService.getCurrentUser().getUsername());
         statusPanel = createStatusPanel();
     }
@@ -43,9 +35,6 @@ public class PrincipalPage extends BaseAuthenticatedPage {
     @Override
     protected void setupLayout() {
         setLayout(new BorderLayout());
-        
-        // Set menu bar
-        setJMenuBar(menuBar);
         
         // Add header panel
         add(headerPanel, BorderLayout.NORTH);
@@ -78,34 +67,6 @@ public class PrincipalPage extends BaseAuthenticatedPage {
         return authService.isPrincipal();
     }
 
-    private JMenuBar createMenuBar() {
-        JMenuBar menuBar = new JMenuBar();
-        
-        // File menu
-        JMenu fileMenu = new JMenu("File");
-        JMenuItem logoutItem = new JMenuItem("Logout");
-        JMenuItem exitItem = new JMenuItem("Exit");
-        
-        logoutItem.addActionListener(e -> performLogout());
-        exitItem.addActionListener(e -> System.exit(0));
-        
-        fileMenu.add(logoutItem);
-        fileMenu.addSeparator();
-        fileMenu.add(exitItem);
-        
-        // Help menu
-        JMenu helpMenu = new JMenu("Help");
-        JMenuItem aboutItem = new JMenuItem("About");
-        
-        aboutItem.addActionListener(e -> showAbout());
-        helpMenu.add(aboutItem);
-        
-        menuBar.add(fileMenu);
-        menuBar.add(helpMenu);
-        
-        return menuBar;
-    }
-
     private void createTabs() {
         // Student Management Tab - using the new refactored panel
         StudentManagementPanel studentPanel = new StudentManagementPanel(authService);
@@ -134,19 +95,5 @@ public class PrincipalPage extends BaseAuthenticatedPage {
         statusPanel.add(statusLabel);
         
         return statusPanel;
-    }
-
-    private void showAbout() {
-        DialogFactory.showSuccess(
-            this,
-            "Kindergarten Management System\n" +
-            "Version 1.0\n" +
-            "Developed for educational purposes\n\n" +
-            "Features:\n" +
-            "- Student Management\n" +
-            "- User Authentication\n" +
-            "- Role-based Access Control",
-            "About"
-        );
     }
 }
