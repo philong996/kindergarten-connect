@@ -41,10 +41,10 @@
 
 ### **Feature 1: User Management Panel**
 **Deliverable:** Tabbed interface for creating/editing teachers and parents with user list table, search functionality, and role assignment  
-- [ ] Implement `UserManagementPanel.java` for user management UI
-- [ ] Add CRUD operations with role validation in `UserService.java`
-- [ ] Create `TeacherDAO.java` for teacher-specific data and class assignments
-- [ ] Create `ParentDAO.java` for parent-student relationships and contact info
+- [x] Implement `UserManagementPanel.java` for user management UI
+- [x] Add CRUD operations with role validation in `UserService.java`
+- [x] Create `TeacherDAO.java` for teacher-specific data and class assignments
+- [x] Create `ParentDAO.java` for parent-student relationships and contact info
 
 ---
 

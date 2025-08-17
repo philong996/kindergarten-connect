@@ -1,20 +1,21 @@
 package ui;
 
 import service.AuthService;
+import ui.components.HeaderPanel;
+import ui.components.DialogFactory;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 /**
  * Principal Page - Main window for Principal users
  * Implements Template Method pattern via BaseAuthenticatedPage
+ * Refactored to use reusable UI components
  */
 public class PrincipalPage extends BaseAuthenticatedPage {
     private JTabbedPane tabbedPane;
     private JMenuBar menuBar;
-    private JPanel headerPanel;
+    private HeaderPanel headerPanel;
     private JPanel statusPanel;
     
     public PrincipalPage(AuthService authService) {
@@ -35,7 +36,7 @@ public class PrincipalPage extends BaseAuthenticatedPage {
     protected void initializeComponents() {
         tabbedPane = new JTabbedPane();
         menuBar = createMenuBar();
-        headerPanel = createHeaderPanel();
+        headerPanel = HeaderPanel.createDashboard("Principal", authService.getCurrentUser().getUsername());
         statusPanel = createStatusPanel();
     }
     
@@ -61,26 +62,22 @@ public class PrincipalPage extends BaseAuthenticatedPage {
     protected void setupPermissions() {
         // Principal has full access - no restrictions needed
         // All tabs and features should be available
-        String roleDisplay = getCurrentUserRoleDisplay();
         
-        // Update header to show role
-        JLabel userLabel = new JLabel("Chào mừng " + roleDisplay + " - " + authService.getCurrentUser().getUsername());
-        userLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        userLabel.setForeground(Color.WHITE);
-        headerPanel.add(userLabel, BorderLayout.EAST);
+        // Update header to show current status
+        headerPanel.setStatus("All permissions granted - Full access");
     }
-    
+
     @Override
     protected void setupEventHandlers() {
         // Event handlers are set up in createMenuBar() and createTabs()
         // Override window closing to use base class behavior
     }
-    
+
     @Override
     protected boolean validateUserRole() {
         return authService.isPrincipal();
     }
-    
+
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         
@@ -108,29 +105,14 @@ public class PrincipalPage extends BaseAuthenticatedPage {
         
         return menuBar;
     }
-    
-    private JPanel createHeaderPanel() {
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        headerPanel.setBackground(new Color(52, 152, 219));
-        
-        JLabel titleLabel = new JLabel("Principal Dashboard");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setForeground(Color.WHITE);
-        
-        headerPanel.add(titleLabel, BorderLayout.WEST);
-        
-        return headerPanel;
-    }
-    
+
     private void createTabs() {
-        // Student Management Tab
+        // Student Management Tab - using the new refactored panel
         StudentManagementPanel studentPanel = new StudentManagementPanel(authService);
         tabbedPane.addTab("Student Management", studentPanel);
         
         // User Management Tab (for Principal only)
-        JPanel userPanel = new JPanel();
-        userPanel.add(new JLabel("User Management - Coming Soon"));
+        UserManagementPanel userPanel = new UserManagementPanel(authService);
         tabbedPane.addTab("User Management", userPanel);
         
         // Reports Tab
@@ -143,7 +125,7 @@ public class PrincipalPage extends BaseAuthenticatedPage {
         settingsPanel.add(new JLabel("Settings - Coming Soon"));
         tabbedPane.addTab("Settings", settingsPanel);
     }
-    
+
     private JPanel createStatusPanel() {
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         statusPanel.setBorder(BorderFactory.createLoweredBevelBorder());
@@ -153,9 +135,9 @@ public class PrincipalPage extends BaseAuthenticatedPage {
         
         return statusPanel;
     }
-    
+
     private void showAbout() {
-        JOptionPane.showMessageDialog(
+        DialogFactory.showSuccess(
             this,
             "Kindergarten Management System\n" +
             "Version 1.0\n" +
@@ -164,8 +146,7 @@ public class PrincipalPage extends BaseAuthenticatedPage {
             "- Student Management\n" +
             "- User Authentication\n" +
             "- Role-based Access Control",
-            "About",
-            JOptionPane.INFORMATION_MESSAGE
+            "About"
         );
     }
 }
