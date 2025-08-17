@@ -94,7 +94,12 @@ public class LoginWindow extends JFrame {
         mainPanel.add(loginButton, gbc);
         
         // Add sample credentials info
-        JLabel infoLabel = new JLabel("<html><center>Sample Credentials:<br/>admin/admin123 (Principal)<br/>teacher1/teacher123 (Teacher)<br/>parent1/parent123 (Parent)</center></html>");
+        JLabel infoLabel = new JLabel("<html><center>Sample Credentials:<br/>"
+            + "hieu_admin/hieu123 (Principal)<br/>"
+            + "ngoc_teacher/ngoc123 (Teacher)<br/>"
+            + "minh_parent/minh123 (Parent)<br/>"
+            + "lan_parent/lan123 (Parent)<br/>"
+            + "hoa_parent/hoa123 (Parent)</center></html>");
         infoLabel.setFont(new Font("Arial", Font.PLAIN, 10));
         infoLabel.setForeground(Color.GRAY);
 

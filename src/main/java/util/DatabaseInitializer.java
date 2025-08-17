@@ -41,7 +41,6 @@ public class DatabaseInitializer {
 
             // Execute the schema SQL
             statement.execute(schemaSQL);
-            System.out.println("Database initialized successfully.");
 
         } catch (SQLException e) {
             System.err.println("Error initializing database: " + e.getMessage());

@@ -127,33 +127,42 @@ CREATE INDEX idx_messages_receiver ON messages(receiver_id);
 
 -- Insert default school
 INSERT INTO schools (name, address, phone) 
-VALUES ('Little Stars Kindergarten', '123 Learning Lane', '555-1234');
+VALUES 
+('Hoa Mai Kindergarten', '456 Flower Street', '555-5678');
 
--- Insert users (Principal, Teacher, Parent)
+-- Insert users (Principal, Teacher, Parents)
 INSERT INTO users (username, password, role, school_id) VALUES
-('admin', 'admin123', 'PRINCIPAL', 1),
-('teacher1', 'teacher123', 'TEACHER', 1),
-('parent1', 'parent123', 'PARENT', 1);
+('hieu_admin', 'hieu123', 'PRINCIPAL', 1),
+('ngoc_teacher', 'ngoc123', 'TEACHER', 1),
+('minh_parent', 'minh123', 'PARENT', 1),
+('lan_parent', 'lan123', 'PARENT', 1),
+('hoa_parent', 'hoa123', 'PARENT', 1);
 
 -- Insert sample class
 INSERT INTO classes (name, school_id, teacher_id) VALUES
-('Sunflower Class', 1, 2);
+('Lớp Hoa Cúc', 1, 2);
 
--- Insert sample student
+-- Insert sample students
 INSERT INTO students (name, dob, class_id, address) VALUES
-('Emma Johnson', '2019-05-15', 1, '456 Family Street');
+('Nguyễn Văn An', '2020-03-10', 1, '789 Peace Avenue'),
+('Trần Thị Bích', '2020-07-22', 1, '123 Harmony Lane'),
+('Lê Minh Hoàng', '2020-11-05', 1, '456 Family Street');
 
--- Insert sample parent
+-- Insert sample parents
 INSERT INTO parents (user_id, name, student_id, relationship, phone, email) VALUES
-(3, 'Sarah Johnson', 1, 'Mother', '555-9876', 'sarah@email.com');
+(3, 'Minh Trần', 1, 'Father', '555-6543', 'minhtran@email.com'),
+(4, 'Lan Nguyễn', 2, 'Mother', '555-7890', 'lannguyen@email.com'),
+(5, 'Hoa Lê', 3, 'Mother', '555-4321', 'hoale@email.com');
 
--- Insert sample post
+-- Insert sample posts
 INSERT INTO posts (title, content, author_id, class_id) VALUES
-('Welcome to Sunflower Class!', 'We are excited to start this year with lots of fun activities.', 2, 1);
+('Chào mừng đến lớp Hoa Cúc!', 'Chúng tôi rất vui mừng bắt đầu năm học mới với nhiều hoạt động thú vị.', 2, 1);
 
 -- Insert sample attendance
 INSERT INTO attendance (student_id, date, status, check_in_time) VALUES
-(1, CURRENT_DATE, 'PRESENT', '08:30:00');
+(1, CURRENT_DATE, 'PRESENT', '08:30:00'),
+(2, CURRENT_DATE, 'LATE', '08:45:00'),
+(3, CURRENT_DATE, 'ABSENT', NULL);
 
 -- =====================================================
 -- SIMPLE VIEWS FOR COMMON QUERIES
