@@ -8,19 +8,34 @@
 - [x] Install PostgreSQL and set up database
 - [x] Create database schema (users, schools, classes, students, parents, posts, messages, attendance tables)
 - [x] Set up JDBC connection
-- [x] Create basic data access layer (DAO classes)
 - [x] Test database connectivity and basic CRUD operations
 
 ---
 
 ### **Feature 2: Authentication System**
 **Deliverable:** Secure login system with role-based access
-- [x] Implement login screen UI
-- [x] Create user authentication logic
-- [x] Implement password validation
-- [x] Create user session management
-- [x] Build role-based access control (Principal, Teacher, Parent)
-- [x] Implement logout functionality
+- [x] Implement login screen UI in `LoginWindow.java`  
+- [x] Create user authentication logic in `AuthService.java`  
+- [x] Implement password validation in `AuthUtil.java`  
+- [x] Create user session management in `AuthorizationService.java`  
+- [x] Build role-based access control (Principal, Teacher, Parent) in `AuthorizationService.java`  
+- [x] Implement logout functionality in `BaseAuthenticatedPage.java`  
+
+---
+
+### **Feature 3: Base Classes**
+**Deliverable:** Core base classes for UI and data models  
+- [x] Implement `BaseAuthenticatedPage.java` as the base class for authenticated UI pages  
+- [x] Implement `User.java` as the data model for users  
+- [x] Implement `Student.java` as the data model for students  
+- [x] Implement `Parent.java` as the data model for parents  
+- [x] Implement `Attendance.java` as the data model for attendance records 
+- [x] Create basic data access layer (DAO classes)  
+  - [x] Implement `UserDAO.java` for user-related database operations  
+  - [x] Implement `StudentDAO.java` for student-related database operations  
+  - [x] Implement `AuthorizationDAO.java` for authorization-related database operations  
+
+---
 
 ## 🔴 Epic 2: Principal Page
 
