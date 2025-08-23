@@ -3,11 +3,20 @@
     "configurations": [
         {
             "type": "java",
+            "name": "AttendanceServiceTest",
+            "request": "launch",
+            "mainClass": "service.AttendanceServiceTest",
+            "projectName": "StudentManagementApp"
+        },
+        {
+            "type": "java",
             "name": "AuthorizationTestRunner",
             "request": "launch",
             "mainClass": "service.AuthorizationTestRunner",
             "projectName": "StudentManagementApp",
-            "classPaths": ["test"]
+            "classPaths": [
+                "test"
+            ]
         },
         {
             "type": "java",

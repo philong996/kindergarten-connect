@@ -97,10 +97,10 @@
 
 ### **Feature 3: Daily Attendance Panel**
 **Deliverable:** Mark daily attendance with date selection, bulk actions, and attendance history  
-- [ ] Implement `AttendancePanel.java` for attendance management UI
-- [ ] Add business logic for attendance marking and validation in `AttendanceService.java`
-- [ ] Create `AttendanceDAO.java` for database operations related to attendance records and history queries
-- [ ] Update `Attendance.java` to include late arrival time and excuse reason fields
+- [x] Implement `AttendancePanel.java` for attendance management UI
+- [x] Add business logic for attendance marking and validation in `AttendanceService.java`
+- [x] Create `AttendanceDAO.java` for database operations related to attendance records and history queries
+- [x] Update `Attendance.java` to include late arrival time and excuse reason fields
 
 ---
 

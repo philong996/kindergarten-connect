@@ -106,6 +106,8 @@ CREATE TABLE attendance (
     date DATE NOT NULL,
     status VARCHAR(20) NOT NULL CHECK (status IN ('PRESENT', 'ABSENT', 'LATE')),
     check_in_time TIME,
+    late_arrival_time TIME, -- Time when late student actually arrived
+    excuse_reason TEXT, -- Reason for absence or lateness
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(student_id, date)
 );

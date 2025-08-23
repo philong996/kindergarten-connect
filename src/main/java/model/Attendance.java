@@ -15,6 +15,10 @@ public class Attendance {
     private LocalTime checkInTime;
     private LocalDateTime createdAt;
     
+    // New fields for enhanced attendance tracking
+    private LocalTime lateArrivalTime;
+    private String excuseReason;
+    
     // Additional fields for display
     private String studentName;
     
@@ -28,6 +32,17 @@ public class Attendance {
         this.checkInTime = checkInTime;
     }
     
+    // Enhanced constructor with new fields
+    public Attendance(int studentId, LocalDate date, String status, LocalTime checkInTime, 
+                     LocalTime lateArrivalTime, String excuseReason) {
+        this.studentId = studentId;
+        this.date = date;
+        this.status = status;
+        this.checkInTime = checkInTime;
+        this.lateArrivalTime = lateArrivalTime;
+        this.excuseReason = excuseReason;
+    }
+    
     // Full constructor
     public Attendance(int id, int studentId, LocalDate date, String status, 
                      LocalTime checkInTime, LocalDateTime createdAt) {
@@ -36,6 +51,20 @@ public class Attendance {
         this.date = date;
         this.status = status;
         this.checkInTime = checkInTime;
+        this.createdAt = createdAt;
+    }
+    
+    // Enhanced full constructor with all fields
+    public Attendance(int id, int studentId, LocalDate date, String status, 
+                     LocalTime checkInTime, LocalTime lateArrivalTime, String excuseReason,
+                     LocalDateTime createdAt) {
+        this.id = id;
+        this.studentId = studentId;
+        this.date = date;
+        this.status = status;
+        this.checkInTime = checkInTime;
+        this.lateArrivalTime = lateArrivalTime;
+        this.excuseReason = excuseReason;
         this.createdAt = createdAt;
     }
     
@@ -60,6 +89,12 @@ public class Attendance {
     
     public String getStudentName() { return studentName; }
     public void setStudentName(String studentName) { this.studentName = studentName; }
+    
+    public LocalTime getLateArrivalTime() { return lateArrivalTime; }
+    public void setLateArrivalTime(LocalTime lateArrivalTime) { this.lateArrivalTime = lateArrivalTime; }
+    
+    public String getExcuseReason() { return excuseReason; }
+    public void setExcuseReason(String excuseReason) { this.excuseReason = excuseReason; }
     
     // Helper methods
     public boolean isPresent() { return "PRESENT".equals(status); }

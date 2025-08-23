@@ -6,6 +6,7 @@ import service.PhysicalDevelopmentService;
 import model.Student;
 import ui.components.HeaderPanel;
 import ui.panels.PhysicalDevelopmentPanel;
+import ui.panels.AttendancePanel;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -37,12 +38,31 @@ public class TeacherPage extends BaseAuthenticatedPage {
         // Create tabbed pane for teacher features
         JTabbedPane tabbedPane = new JTabbedPane();
         
+        // Attendance tab
+        JPanel attendanceTab = createAttendanceTab();
+        tabbedPane.addTab("Daily Attendance", attendanceTab);
+        
         // Physical Development tab
         JPanel physicalDevPanel = createPhysicalDevelopmentTab();
         tabbedPane.addTab("Physical Development", physicalDevPanel);
         
         mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
+    }
+    
+    private JPanel createAttendanceTab() {
+        // For attendance, we need to get the teacher's class ID
+        // For now, let's use classId = 1 as a default
+        // In a real application, this would come from the logged-in teacher's data
+        int classId = 1; // This should be retrieved from the teacher's profile
+        int teacherId = authService.getCurrentUser().getId();
+        
+        AttendancePanel attendancePanel = new AttendancePanel(classId, teacherId);
+        
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(attendancePanel, BorderLayout.CENTER);
+        
+        return panel;
     }
     
     private JPanel createPhysicalDevelopmentTab() {
