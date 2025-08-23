@@ -1,7 +1,8 @@
-import ui.LoginWindow;
 import util.DatabaseInitializer;
 
 import javax.swing.*;
+
+import ui.pages.LoginWindow;
 
 /**
  * Main application entry point

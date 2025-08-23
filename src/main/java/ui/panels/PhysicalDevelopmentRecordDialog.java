@@ -1,4 +1,4 @@
-package ui;
+package ui.panels;
 
 import service.PhysicalDevelopmentService;
 

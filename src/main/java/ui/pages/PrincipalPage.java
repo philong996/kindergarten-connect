@@ -1,7 +1,9 @@
-package ui;
+package ui.pages;
 
 import service.AuthService;
 import ui.components.HeaderPanel;
+import ui.panels.StudentManagementPanel;
+import ui.panels.UserManagementPanel;
 
 import javax.swing.*;
 import java.awt.*;

@@ -1,4 +1,4 @@
-package ui;
+package ui.panels;
 
 import model.PhysicalDevelopmentRecord;
 import service.PhysicalDevelopmentService;

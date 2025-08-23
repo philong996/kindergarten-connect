@@ -1,10 +1,11 @@
-package ui;
+package ui.pages;
 
 import service.AuthService;
 import service.StudentService;
 import service.PhysicalDevelopmentService;
 import model.Student;
 import ui.components.HeaderPanel;
+import ui.panels.PhysicalDevelopmentPanel;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
