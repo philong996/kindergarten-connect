@@ -18,7 +18,7 @@ public class StudentDAO {
      * Create new student
      */
     public boolean create(Student student) {
-        String sql = "INSERT INTO students (name, dob, class_id, address) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO students (name, dob, class_id, address, profile_image) VALUES (?, ?, ?, ?, ?)";
         
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -27,6 +27,13 @@ public class StudentDAO {
             stmt.setDate(2, Date.valueOf(student.getDob()));
             stmt.setInt(3, student.getClassId());
             stmt.setString(4, student.getAddress());
+            
+            // Handle profile image
+            if (student.getProfileImage() != null) {
+                stmt.setBytes(5, student.getProfileImage());
+            } else {
+                stmt.setNull(5, java.sql.Types.BINARY);
+            }
             
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
@@ -134,7 +141,7 @@ public class StudentDAO {
      * Update student
      */
     public boolean update(Student student) {
-        String sql = "UPDATE students SET name = ?, dob = ?, class_id = ?, address = ? WHERE id = ?";
+        String sql = "UPDATE students SET name = ?, dob = ?, class_id = ?, address = ?, profile_image = ? WHERE id = ?";
         
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -143,13 +150,46 @@ public class StudentDAO {
             stmt.setDate(2, Date.valueOf(student.getDob()));
             stmt.setInt(3, student.getClassId());
             stmt.setString(4, student.getAddress());
-            stmt.setInt(5, student.getId());
+            
+            // Handle profile image
+            if (student.getProfileImage() != null) {
+                stmt.setBytes(5, student.getProfileImage());
+            } else {
+                stmt.setNull(5, java.sql.Types.BINARY);
+            }
+            
+            stmt.setInt(6, student.getId());
             
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
             
         } catch (SQLException e) {
             System.err.println("Error updating student: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Update student profile image
+     */
+    public boolean updateProfileImage(int studentId, byte[] profileImageData) {
+        String sql = "UPDATE students SET profile_image = ? WHERE id = ?";
+        
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            if (profileImageData != null) {
+                stmt.setBytes(1, profileImageData);
+            } else {
+                stmt.setNull(1, java.sql.Types.BINARY);
+            }
+            stmt.setInt(2, studentId);
+            
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("Error updating student profile image: " + e.getMessage());
             return false;
         }
     }
@@ -211,6 +251,7 @@ public class StudentDAO {
         
         student.setClassId(rs.getInt("class_id"));
         student.setAddress(rs.getString("address"));
+        student.setProfileImage(rs.getBytes("profile_image"));
         
         Timestamp createdAt = rs.getTimestamp("created_at");
         if (createdAt != null) {

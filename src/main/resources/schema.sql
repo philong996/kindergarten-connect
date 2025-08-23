@@ -56,6 +56,7 @@ CREATE TABLE students (
     dob DATE NOT NULL,
     class_id INTEGER REFERENCES classes(id),
     address TEXT,
+    profile_image BYTEA, -- Binary data for profile image
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -162,15 +163,17 @@ INSERT INTO classes (name, school_id, teacher_id) VALUES
 
 -- Insert sample students
 INSERT INTO students (name, dob, class_id, address) VALUES
-('Nguyễn Văn An', '2020-03-10', 1, '789 Peace Avenue'),
+('Trần Văn An', '2020-03-10', 1, '789 Peace Avenue'),
 ('Trần Thị Bích', '2020-07-22', 1, '123 Harmony Lane'),
-('Lê Minh Hoàng', '2020-11-05', 1, '456 Family Street');
+('Lê Minh Hoàng', '2020-11-05', 1, '456 Family Street'),
+('Trần Minh Hoàng', '2020-11-08', 1, '456 Family Street');
 
 -- Insert sample parents
 INSERT INTO parents (user_id, name, student_id, relationship, phone, email) VALUES
 (3, 'Minh Trần', 1, 'Father', '555-6543', 'minhtran@email.com'),
 (4, 'Lan Nguyễn', 2, 'Mother', '555-7890', 'lannguyen@email.com'),
-(5, 'Hoa Lê', 3, 'Mother', '555-4321', 'hoale@email.com');
+(5, 'Hoa Lê', 3, 'Mother', '555-4321', 'hoale@email.com'),
+(3, 'Minh Trần', 4, 'Father', '555-6543', 'minhtran@email.com');
 
 -- Insert sample posts
 INSERT INTO posts (title, content, author_id, class_id) VALUES

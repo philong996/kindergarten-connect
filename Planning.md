@@ -128,9 +128,10 @@
 
 ### **Feature 1: My Children Overview Panel**
 **Deliverable:** Display enrolled children with quick stats and child selection for context switching  
-- [ ] Implement `MyChildrenPanel.java` for parent dashboard UI
-- [ ] Add business logic for parent-specific operations and child access in `ParentService.java`
-- [ ] Update `ParentDAO.java` to include methods for parent's children and quick statistics
+- [x] Implement `MyChildrenPanel.java` for parent dashboard UI
+- [x] Add business logic for parent-specific operations and child access in `ParentService.java`
+- [x] Update `ParentDAO.java` to include methods for parent's children and quick statistics
+- [x] Add the child profile
 
 ---
 

@@ -18,6 +18,8 @@ public class ParentPage extends BaseAuthenticatedPage {
     private HeaderPanel headerPanel;
     private JPanel mainPanel;
     private ParentService parentService;
+    private MyChildrenPanel myChildrenPanel;
+    private JPanel childDevPanel;
     
     public ParentPage(AuthService authService) {
         super(authService);
@@ -41,12 +43,54 @@ public class ParentPage extends BaseAuthenticatedPage {
         // Create tabbed pane for parent features
         JTabbedPane tabbedPane = new JTabbedPane();
         
+        // My Children Overview tab (new)
+        myChildrenPanel = createMyChildrenTab();
+        tabbedPane.addTab("My Children", myChildrenPanel);
+        
         // Child Development tab
-        JPanel childDevPanel = createChildDevelopmentTab();
+        childDevPanel = createChildDevelopmentTab();
         tabbedPane.addTab("Child Development", childDevPanel);
         
         mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
+    }
+    
+    private MyChildrenPanel createMyChildrenTab() {
+        int parentUserId = authService.getCurrentUser().getId();
+        
+        // Create MyChildrenPanel with child selection callback
+        MyChildrenPanel panel = new MyChildrenPanel(parentUserId, this::onChildSelected);
+        
+        return panel;
+    }
+    
+    /**
+     * Callback method when a child is selected from MyChildrenPanel
+     */
+    private void onChildSelected(Student selectedChild) {
+        // Update the child development tab to show data for the selected child
+        // This could involve refreshing the PhysicalDevelopmentPanel with the new child's data
+        // For now, we'll show a simple notification
+        
+        if (childDevPanel != null) {
+            // Remove existing content
+            childDevPanel.removeAll();
+            
+            // Create new PhysicalDevelopmentPanel for the selected child
+            PhysicalDevelopmentPanel physicalPanel = new PhysicalDevelopmentPanel(
+                selectedChild.getId(), selectedChild.getName()
+            );
+            
+            // Add header info about selected child
+            JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            headerPanel.add(new JLabel("Viewing development data for: " + selectedChild.getName() + " (Age: " + selectedChild.getAge() + ")"));
+            
+            childDevPanel.add(headerPanel, BorderLayout.NORTH);
+            childDevPanel.add(physicalPanel, BorderLayout.CENTER);
+            
+            childDevPanel.revalidate();
+            childDevPanel.repaint();
+        }
     }
     
     private JPanel createChildDevelopmentTab() {

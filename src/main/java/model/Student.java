@@ -13,6 +13,7 @@ public class Student {
     private int classId;
     private String address;
     private LocalDateTime createdAt;
+    private byte[] profileImage; // Binary data for profile image
     
     // Additional fields for display
     private String className; // For joining with class table
@@ -57,6 +58,9 @@ public class Student {
     
     public String getClassName() { return className; }
     public void setClassName(String className) { this.className = className; }
+    
+    public byte[] getProfileImage() { return profileImage; }
+    public void setProfileImage(byte[] profileImage) { this.profileImage = profileImage; }
     
     // Helper method to calculate age
     public int getAge() {

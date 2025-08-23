@@ -223,6 +223,132 @@ public class ParentDAO {
     }
     
     /**
+     * Get quick statistics for a specific child
+     */
+    public Map<String, Object> getChildQuickStats(int studentId) {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // Get attendance statistics for the current month
+        String attendanceSql = """
+            SELECT 
+                COUNT(*) as total_days,
+                SUM(CASE WHEN status = 'PRESENT' THEN 1 ELSE 0 END) as present_days,
+                SUM(CASE WHEN status = 'ABSENT' THEN 1 ELSE 0 END) as absent_days,
+                SUM(CASE WHEN status = 'LATE' THEN 1 ELSE 0 END) as late_days
+            FROM attendance 
+            WHERE student_id = ? 
+            AND EXTRACT(MONTH FROM date) = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND EXTRACT(YEAR FROM date) = EXTRACT(YEAR FROM CURRENT_DATE)
+        """;
+        
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(attendanceSql)) {
+            
+            stmt.setInt(1, studentId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    stats.put("total_days", rs.getInt("total_days"));
+                    stats.put("present_days", rs.getInt("present_days"));
+                    stats.put("absent_days", rs.getInt("absent_days"));
+                    stats.put("late_days", rs.getInt("late_days"));
+                    
+                    // Calculate attendance percentage
+                    int totalDays = rs.getInt("total_days");
+                    int presentDays = rs.getInt("present_days");
+                    double attendanceRate = totalDays > 0 ? (double) presentDays / totalDays * 100 : 0;
+                    stats.put("attendance_rate", Math.round(attendanceRate * 100.0) / 100.0);
+                } else {
+                    // Default values if no attendance records
+                    stats.put("total_days", 0);
+                    stats.put("present_days", 0);
+                    stats.put("absent_days", 0);
+                    stats.put("late_days", 0);
+                    stats.put("attendance_rate", 0.0);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error getting child attendance stats: " + e.getMessage());
+            // Return default values on error
+            stats.put("total_days", 0);
+            stats.put("present_days", 0);
+            stats.put("absent_days", 0);
+            stats.put("late_days", 0);
+            stats.put("attendance_rate", 0.0);
+        }
+        
+        // Get physical development record count
+        String physicalDevSql = """
+            SELECT COUNT(*) as record_count
+            FROM physical_development_records 
+            WHERE student_id = ?
+        """;
+        
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(physicalDevSql)) {
+            
+            stmt.setInt(1, studentId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    stats.put("development_records", rs.getInt("record_count"));
+                } else {
+                    stats.put("development_records", 0);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error getting child development stats: " + e.getMessage());
+            stats.put("development_records", 0);
+        }
+        
+        return stats;
+    }
+    
+    /**
+     * Get aggregated quick statistics for all children of a parent
+     */
+    public Map<String, Object> getParentChildrenOverview(int userId) {
+        Map<String, Object> overview = new HashMap<>();
+        
+        // Get children count
+        List<Map<String, Object>> children = getParentChildren(userId);
+        overview.put("total_children", children.size());
+        
+        if (children.isEmpty()) {
+            overview.put("avg_attendance_rate", 0.0);
+            overview.put("total_development_records", 0);
+            overview.put("children_with_perfect_attendance", 0);
+            return overview;
+        }
+        
+        double totalAttendanceRate = 0;
+        int totalDevelopmentRecords = 0;
+        int childrenWithPerfectAttendance = 0;
+        
+        for (Map<String, Object> child : children) {
+            int studentId = (Integer) child.get("id");
+            Map<String, Object> childStats = getChildQuickStats(studentId);
+            
+            double attendanceRate = (Double) childStats.get("attendance_rate");
+            totalAttendanceRate += attendanceRate;
+            
+            int devRecords = (Integer) childStats.get("development_records");
+            totalDevelopmentRecords += devRecords;
+            
+            if (attendanceRate >= 100.0) {
+                childrenWithPerfectAttendance++;
+            }
+        }
+        
+        // Calculate averages
+        overview.put("avg_attendance_rate", Math.round(totalAttendanceRate / children.size() * 100.0) / 100.0);
+        overview.put("total_development_records", totalDevelopmentRecords);
+        overview.put("children_with_perfect_attendance", childrenWithPerfectAttendance);
+        
+        return overview;
+    }
+    
+    /**
      * Add parent-student relationship
      */
     public boolean addParentStudentRelationship(int parentId, int studentId, String relationship) {
