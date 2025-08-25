@@ -329,13 +329,16 @@ public class AttendancePanel extends JPanel {
     }
     
     private void showAttendanceHistory() {
-        // Show dialog to select date range and student
-        AttendanceHistoryDialog historyDialog = new AttendanceHistoryDialog(
-            (JFrame) SwingUtilities.getWindowAncestor(this), 
-            classId, 
-            attendanceService
-        );
-        historyDialog.setVisible(true);
+        // Create a new window/dialog to show the attendance history panel
+        JFrame historyFrame = new JFrame("Attendance History");
+        historyFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        
+        AttendanceHistoryPanel historyPanel = new AttendanceHistoryPanel(classId, attendanceService);
+        
+        historyFrame.add(historyPanel);
+        historyFrame.setSize(900, 600);
+        historyFrame.setLocationRelativeTo(this);
+        historyFrame.setVisible(true);
     }
     
     private void editAttendanceDetails(int row) {

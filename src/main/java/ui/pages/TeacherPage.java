@@ -7,6 +7,7 @@ import model.Student;
 import ui.components.HeaderPanel;
 import ui.panels.PhysicalDevelopmentPanel;
 import ui.panels.AttendancePanel;
+import ui.panels.AttendanceHistoryPanel;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -42,6 +43,10 @@ public class TeacherPage extends BaseAuthenticatedPage {
         JPanel attendanceTab = createAttendanceTab();
         tabbedPane.addTab("Daily Attendance", attendanceTab);
         
+        // Attendance History tab
+        JPanel attendanceHistoryTab = createAttendanceHistoryTab();
+        tabbedPane.addTab("Attendance History", attendanceHistoryTab);
+        
         // Physical Development tab
         JPanel physicalDevPanel = createPhysicalDevelopmentTab();
         tabbedPane.addTab("Physical Development", physicalDevPanel);
@@ -61,6 +66,18 @@ public class TeacherPage extends BaseAuthenticatedPage {
         
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(attendancePanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    private JPanel createAttendanceHistoryTab() {
+        // For attendance history, we need to get the teacher's class ID
+        int classId = 1; // This should be retrieved from the teacher's profile
+        
+        AttendanceHistoryPanel historyPanel = new AttendanceHistoryPanel(classId);
+        
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(historyPanel, BorderLayout.CENTER);
         
         return panel;
     }

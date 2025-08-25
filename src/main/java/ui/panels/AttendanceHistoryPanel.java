@@ -14,9 +14,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Dialog for viewing attendance history
+ * Panel for viewing attendance history and statistics
  */
-public class AttendanceHistoryDialog extends JDialog {
+public class AttendanceHistoryPanel extends JPanel {
     private AttendanceService attendanceService;
     private StudentDAO studentDAO;
     private int classId;
@@ -26,18 +26,18 @@ public class AttendanceHistoryDialog extends JDialog {
     private JSpinner startDateSpinner;
     private JSpinner endDateSpinner;
     private JButton searchButton;
-    private JButton closeButton;
+    private JButton refreshButton;
     
     private JTable historyTable;
     private DefaultTableModel tableModel;
     private JScrollPane tableScrollPane;
     
     private JLabel statsLabel;
+    private JLabel titleLabel;
     
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
     
-    public AttendanceHistoryDialog(JFrame parent, int classId, AttendanceService attendanceService) {
-        super(parent, "Attendance History", true);
+    public AttendanceHistoryPanel(int classId, AttendanceService attendanceService) {
         this.classId = classId;
         this.attendanceService = attendanceService;
         this.studentDAO = new StudentDAO();
@@ -46,13 +46,21 @@ public class AttendanceHistoryDialog extends JDialog {
         layoutComponents();
         setupEventHandlers();
         loadStudents();
-        
-        setSize(800, 600);
-        setLocationRelativeTo(parent);
-        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+    }
+    
+    // Convenience constructor that creates its own AttendanceService
+    public AttendanceHistoryPanel(int classId) {
+        this(classId, new AttendanceService());
     }
     
     private void initializeComponents() {
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createTitledBorder("Attendance History & Statistics"));
+        
+        // Title
+        titleLabel = new JLabel("Attendance History", JLabel.CENTER);
+        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        
         // Student selection
         studentCombo = new JComboBox<>();
         studentCombo.setPreferredSize(new Dimension(200, 25));
@@ -72,7 +80,7 @@ public class AttendanceHistoryDialog extends JDialog {
         endDateSpinner.setValue(java.sql.Date.valueOf(endDate));
         
         searchButton = new JButton("Search");
-        closeButton = new JButton("Close");
+        refreshButton = new JButton("Refresh");
         
         // History table
         String[] columnNames = {"Date", "Status", "Check-in Time", "Late Arrival", "Excuse Reason"};
@@ -84,17 +92,31 @@ public class AttendanceHistoryDialog extends JDialog {
         };
         historyTable = new JTable(tableModel);
         historyTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        historyTable.setRowHeight(25);
+        
+        // Set column widths
+        historyTable.getColumnModel().getColumn(0).setPreferredWidth(100); // Date
+        historyTable.getColumnModel().getColumn(1).setPreferredWidth(80);  // Status
+        historyTable.getColumnModel().getColumn(2).setPreferredWidth(100); // Check-in
+        historyTable.getColumnModel().getColumn(3).setPreferredWidth(100); // Late arrival
+        historyTable.getColumnModel().getColumn(4).setPreferredWidth(200); // Excuse reason
+        
         tableScrollPane = new JScrollPane(historyTable);
+        tableScrollPane.setPreferredSize(new Dimension(600, 300));
         
         // Stats label
         statsLabel = new JLabel("Select a student and date range to view statistics", JLabel.CENTER);
         statsLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        statsLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
     }
     
     private void layoutComponents() {
-        setLayout(new BorderLayout());
+        // Top panel with title
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.add(titleLabel, BorderLayout.CENTER);
+        titlePanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
-        // Search panel
+        // Search criteria panel
         JPanel searchPanel = new JPanel(new GridBagLayout());
         searchPanel.setBorder(BorderFactory.createTitledBorder("Search Criteria"));
         GridBagConstraints gbc = new GridBagConstraints();
@@ -107,41 +129,43 @@ public class AttendanceHistoryDialog extends JDialog {
         searchPanel.add(studentCombo, gbc);
         
         // Date range
-        gbc.gridx = 0; gbc.gridy = 1; gbc.anchor = GridBagConstraints.WEST; gbc.weightx = 0;
+        gbc.gridx = 0; gbc.gridy = 1; gbc.anchor = GridBagConstraints.WEST; gbc.weightx = 0; gbc.fill = GridBagConstraints.NONE;
         searchPanel.add(new JLabel("From:"), gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 0.3;
         searchPanel.add(startDateSpinner, gbc);
         
-        gbc.gridx = 2; gbc.anchor = GridBagConstraints.WEST; gbc.fill = GridBagConstraints.NONE;
+        gbc.gridx = 2; gbc.anchor = GridBagConstraints.WEST; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
         searchPanel.add(new JLabel("To:"), gbc);
-        gbc.gridx = 3; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridx = 3; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 0.3;
         searchPanel.add(endDateSpinner, gbc);
         
-        gbc.gridx = 4; gbc.fill = GridBagConstraints.NONE;
+        // Buttons
+        gbc.gridx = 4; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
         searchPanel.add(searchButton, gbc);
+        gbc.gridx = 5;
+        searchPanel.add(refreshButton, gbc);
         
         // Stats panel
         JPanel statsPanel = new JPanel(new BorderLayout());
         statsPanel.setBorder(BorderFactory.createTitledBorder("Statistics"));
         statsPanel.add(statsLabel, BorderLayout.CENTER);
         
-        // Button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout());
-        buttonPanel.add(closeButton);
-        
         // Main layout
-        add(searchPanel, BorderLayout.NORTH);
-        add(tableScrollPane, BorderLayout.CENTER);
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.add(titlePanel, BorderLayout.NORTH);
+        topPanel.add(searchPanel, BorderLayout.CENTER);
         
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.add(statsPanel, BorderLayout.CENTER);
-        bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
-        add(bottomPanel, BorderLayout.SOUTH);
+        add(topPanel, BorderLayout.NORTH);
+        add(tableScrollPane, BorderLayout.CENTER);
+        add(statsPanel, BorderLayout.SOUTH);
     }
     
     private void setupEventHandlers() {
         searchButton.addActionListener(e -> searchHistory());
-        closeButton.addActionListener(e -> dispose());
+        refreshButton.addActionListener(e -> {
+            loadStudents();
+            clearResults();
+        });
         
         // Auto-search when student selection changes
         studentCombo.addActionListener(e -> {
@@ -153,6 +177,8 @@ public class AttendanceHistoryDialog extends JDialog {
     
     private void loadStudents() {
         try {
+            studentCombo.removeAllItems();
+            
             List<Student> students = studentDAO.findByClassId(classId);
             
             // Add "All Students" option
@@ -169,6 +195,12 @@ public class AttendanceHistoryDialog extends JDialog {
                 "Error",
                 JOptionPane.ERROR_MESSAGE);
         }
+    }
+    
+    private void clearResults() {
+        tableModel.setRowCount(0);
+        statsLabel.setText("Select a student and date range to view statistics");
+        statsLabel.setForeground(Color.BLACK);
     }
     
     private void searchHistory() {
@@ -200,7 +232,12 @@ public class AttendanceHistoryDialog extends JDialog {
                 LocalDate current = start;
                 while (!current.isAfter(end)) {
                     List<Attendance> dailyAttendance = attendanceService.getClassAttendance(classId, current);
-                    attendanceHistory.addAll(dailyAttendance);
+                    // Only add records that have actual attendance data (not default absent)
+                    for (Attendance attendance : dailyAttendance) {
+                        if (attendance.getId() > 0) { // Only saved records
+                            attendanceHistory.add(attendance);
+                        }
+                    }
                     current = current.plusDays(1);
                 }
             } else {
@@ -225,6 +262,13 @@ public class AttendanceHistoryDialog extends JDialog {
             // Update statistics
             updateStatistics(selectedStudent.getId(), start, end);
             
+            // Update title to show search results
+            if (selectedStudent.getId() == 0) {
+                titleLabel.setText("Attendance History - All Students (" + attendanceHistory.size() + " records)");
+            } else {
+                titleLabel.setText("Attendance History - " + selectedStudent.getName() + " (" + attendanceHistory.size() + " records)");
+            }
+            
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
                 "Error searching attendance history: " + e.getMessage(),
@@ -236,8 +280,10 @@ public class AttendanceHistoryDialog extends JDialog {
     private void updateStatistics(int studentId, LocalDate startDate, LocalDate endDate) {
         try {
             if (studentId == 0) {
-                // All students statistics
-                statsLabel.setText("Statistics not available for all students view");
+                // All students statistics - calculate overall class stats
+                statsLabel.setText("Overall class statistics for " + startDate.format(dateFormatter) + 
+                                 " to " + endDate.format(dateFormatter) + " - " + tableModel.getRowCount() + " total records");
+                statsLabel.setForeground(Color.BLUE);
                 return;
             }
             
@@ -270,6 +316,43 @@ public class AttendanceHistoryDialog extends JDialog {
             statsLabel.setText("Error calculating statistics");
             statsLabel.setForeground(Color.RED);
         }
+    }
+    
+    /**
+     * Public method to refresh the panel data
+     */
+    public void refresh() {
+        loadStudents();
+        clearResults();
+        titleLabel.setText("Attendance History");
+    }
+    
+    /**
+     * Public method to set the selected student
+     */
+    public void setSelectedStudent(int studentId) {
+        for (int i = 0; i < studentCombo.getItemCount(); i++) {
+            StudentItem item = studentCombo.getItemAt(i);
+            if (item.getId() == studentId) {
+                studentCombo.setSelectedItem(item);
+                break;
+            }
+        }
+    }
+    
+    /**
+     * Public method to set the date range
+     */
+    public void setDateRange(LocalDate startDate, LocalDate endDate) {
+        startDateSpinner.setValue(java.sql.Date.valueOf(startDate));
+        endDateSpinner.setValue(java.sql.Date.valueOf(endDate));
+    }
+    
+    /**
+     * Public method to trigger search programmatically
+     */
+    public void performSearch() {
+        searchHistory();
     }
     
     // Helper class for student combo box items
