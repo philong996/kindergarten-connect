@@ -2,6 +2,7 @@ package ui.pages;
 
 import service.AuthService;
 import ui.components.HeaderPanel;
+import ui.panels.ClassManagementPanel;
 import ui.panels.StudentManagementPanel;
 import ui.panels.UserManagementPanel;
 
@@ -73,6 +74,10 @@ public class PrincipalPage extends BaseAuthenticatedPage {
         // Student Management Tab - using the new refactored panel
         StudentManagementPanel studentPanel = new StudentManagementPanel(authService);
         tabbedPane.addTab("Student Management", studentPanel);
+        
+        // Class Management Tab - new panel for managing classes
+        ClassManagementPanel classPanel = new ClassManagementPanel(authService);
+        tabbedPane.addTab("Class Management", classPanel);
         
         // User Management Tab (for Principal only)
         UserManagementPanel userPanel = new UserManagementPanel(authService);

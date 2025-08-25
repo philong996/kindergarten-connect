@@ -42,6 +42,8 @@ CREATE TABLE classes (
     name VARCHAR(50) NOT NULL,
     school_id INTEGER NOT NULL REFERENCES schools(id),
     teacher_id INTEGER REFERENCES users(id),
+    grade_level VARCHAR(20) NOT NULL DEFAULT 'Lớp Lá (5-6 tuổi)', -- e.g., 'Lớp Mầm (3-4 tuổi)', 'Lớp Chồi (4-5 tuổi)', 'Lớp Lá (5-6 tuổi)'
+    capacity INTEGER NOT NULL DEFAULT 10,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

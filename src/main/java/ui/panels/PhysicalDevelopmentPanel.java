@@ -159,20 +159,40 @@ public class PhysicalDevelopmentPanel extends JPanel {
     }
     
     private void loadData() {
-        // Load current data
-        PhysicalDevelopmentRecord latest = physicalService.getLatestPhysicalData(studentId);
-        if (latest != null) {
-            updateCurrentDataDisplay(latest);
-        }
-        
-        // Load history
-        List<PhysicalDevelopmentRecord> history = physicalService.getStudentPhysicalHistory(studentId);
-        updateHistoryTable(history);
-        
-        // Update growth trend
-        if (history.size() >= 2) {
-            String trend = physicalService.getGrowthTrend(history);
-            growthTrendLabel.setText("Growth trend: " + trend);
+        try {
+            // Load current data
+            PhysicalDevelopmentRecord latest = physicalService.getLatestPhysicalData(studentId);
+            if (latest != null) {
+                updateCurrentDataDisplay(latest);
+            } else {
+                // No data available - show appropriate message
+                currentHeightLabel.setText("Height: No data available");
+                currentWeightLabel.setText("Weight: No data available");
+                currentBMILabel.setText("BMI: No data available");
+                ageLabel.setText("Age: --");
+                lastMeasurementLabel.setText("Last measured: No records found");
+            }
+            
+            // Load history
+            List<PhysicalDevelopmentRecord> history = physicalService.getStudentPhysicalHistory(studentId);
+            updateHistoryTable(history);
+            
+            // Update growth trend
+            if (history.size() >= 2) {
+                String trend = physicalService.getGrowthTrend(history);
+                growthTrendLabel.setText("Growth trend: " + trend);
+            } else {
+                growthTrendLabel.setText("Growth trend: Insufficient data for analysis");
+            }
+        } catch (Exception e) {
+            // Handle any errors during data loading
+            System.err.println("Error loading physical development data for student " + studentId + ": " + e.getMessage());
+            e.printStackTrace();
+            
+            currentHeightLabel.setText("Height: Error loading data");
+            currentWeightLabel.setText("Weight: Error loading data");
+            currentBMILabel.setText("BMI: Error loading data");
+            lastMeasurementLabel.setText("Error: " + e.getMessage());
         }
     }
     
@@ -210,6 +230,8 @@ public class PhysicalDevelopmentPanel extends JPanel {
     private void updateHistoryTable(List<PhysicalDevelopmentRecord> records) {
         tableModel.setRowCount(0);
         
+        // System.out.println("Loading " + records.size() + " physical development records for student " + studentId);
+        
         for (PhysicalDevelopmentRecord record : records) {
             Object[] row = {
                 record.getMeasurementDate().format(dateFormatter),
@@ -221,6 +243,12 @@ public class PhysicalDevelopmentPanel extends JPanel {
                 record.getNotes() != null ? record.getNotes() : ""
             };
             tableModel.addRow(row);
+        }
+        
+        if (records.isEmpty()) {
+            // Add a placeholder row to indicate no data
+            Object[] emptyRow = {"No records", "found", "", "", "", "", ""};
+            tableModel.addRow(emptyRow);
         }
     }
     

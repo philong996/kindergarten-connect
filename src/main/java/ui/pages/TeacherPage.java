@@ -8,6 +8,7 @@ import ui.components.HeaderPanel;
 import ui.panels.PhysicalDevelopmentPanel;
 import ui.panels.AttendancePanel;
 import ui.panels.AttendanceHistoryPanel;
+import ui.panels.ClassManagementPanel;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -213,7 +214,7 @@ public class TeacherPage extends BaseAuthenticatedPage {
             for (Component comp : components) {
                 if (comp instanceof JTabbedPane) {
                     JTabbedPane tabbedPane = (JTabbedPane) comp;
-                    Component tabComponent = tabbedPane.getComponentAt(0); // Physical Development tab
+                    Component tabComponent = tabbedPane.getComponentAt(2); // Physical Development tab (index 2)
                     if (tabComponent instanceof JPanel) {
                         JPanel tabPanel = (JPanel) tabComponent;
                         Component[] tabComponents = tabPanel.getComponents();

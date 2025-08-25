@@ -8,6 +8,7 @@ import dao.StudentDAO;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -94,6 +95,9 @@ public class AttendanceHistoryPanel extends JPanel {
         historyTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         historyTable.setRowHeight(25);
         
+        // Set up custom renderer for status column
+        setupTableColumns();
+        
         // Set column widths
         historyTable.getColumnModel().getColumn(0).setPreferredWidth(100); // Date
         historyTable.getColumnModel().getColumn(1).setPreferredWidth(80);  // Status
@@ -108,6 +112,11 @@ public class AttendanceHistoryPanel extends JPanel {
         statsLabel = new JLabel("Select a student and date range to view statistics", JLabel.CENTER);
         statsLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         statsLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    }
+    
+    private void setupTableColumns() {
+        // Set up custom renderer for status column (column index 1)
+        historyTable.getColumnModel().getColumn(1).setCellRenderer(new StatusCellRenderer());
     }
     
     private void layoutComponents() {
@@ -353,6 +362,31 @@ public class AttendanceHistoryPanel extends JPanel {
      */
     public void performSearch() {
         searchHistory();
+    }
+    
+    // Custom cell renderer for status column
+    private class StatusCellRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, 
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            
+            if (!isSelected) {
+                String status = (String) value;
+                if ("PRESENT".equals(status)) {
+                    c.setBackground(Color.GREEN.brighter());
+                } else if ("ABSENT".equals(status)) {
+                    c.setBackground(Color.RED.brighter());
+                } else if ("LATE".equals(status)) {
+                    c.setBackground(Color.YELLOW.brighter());
+                } else {
+                    c.setBackground(Color.WHITE);
+                }
+            }
+            
+            return c;
+        }
     }
     
     // Helper class for student combo box items

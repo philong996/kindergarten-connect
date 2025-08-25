@@ -32,7 +32,7 @@ public class StudentManagementPanel extends JPanel {
     private static final String FIELD_NAME = "name";
     private static final String FIELD_DOB = "dob";
     private static final String FIELD_ADDRESS = "address";
-    private static final String FIELD_CLASS_ID = "classId";
+    private static final String FIELD_CLASS = "class";
     
     private Student selectedStudent;
     
@@ -60,8 +60,11 @@ public class StudentManagementPanel extends JPanel {
         formBuilder = new FormBuilder("Student Information", 2);
         formBuilder.addTextField(FIELD_NAME, "Name", true)
                   .addDateField(FIELD_DOB, "Date of Birth", true)
-                  .addNumberField(FIELD_CLASS_ID, "Class ID", true)
+                  .addComboBox(FIELD_CLASS, "Class", new String[]{"Loading..."}, true)
                   .addTextField(FIELD_ADDRESS, "Address", false);
+        
+        // Load available classes for the dropdown
+        loadAvailableClasses();
         
         // Create button panel
         buttonPanel = ButtonPanel.createCrudPanel(
@@ -100,7 +103,7 @@ public class StudentManagementPanel extends JPanel {
         if (!canManageStudents) {
             // Show tooltip explaining restrictions
             String tooltip = "You don't have permission to edit student information";
-            for (String fieldId : new String[]{FIELD_NAME, FIELD_DOB, FIELD_ADDRESS, FIELD_CLASS_ID}) {
+            for (String fieldId : new String[]{FIELD_NAME, FIELD_DOB, FIELD_ADDRESS, FIELD_CLASS}) {
                 FormField field = formBuilder.getField(fieldId);
                 if (field != null) {
                     field.setFieldToolTip(tooltip);
@@ -140,6 +143,8 @@ public class StudentManagementPanel extends JPanel {
             List<Student> students = studentService.getAllStudents();
             updateTable(students);
             searchPanel.clearSearchText();
+            // Also refresh the class list in case new classes have been added
+            loadAvailableClasses();
         } catch (Exception e) {
             DialogFactory.showError(this, "Error loading student data: " + e.getMessage());
         }
@@ -169,7 +174,24 @@ public class StudentManagementPanel extends JPanel {
         if (selectedStudent != null) {
             formBuilder.setValue(FIELD_NAME, selectedStudent.getName());
             formBuilder.setValue(FIELD_DOB, selectedStudent.getDob().toString());
-            formBuilder.setValue(FIELD_CLASS_ID, String.valueOf(selectedStudent.getClassId()));
+            
+            // Set class selection by finding the matching class
+            try {
+                List<Object[]> availableClasses = studentService.getAvailableClasses();
+                String selectedClassName = null;
+                for (Object[] classInfo : availableClasses) {
+                    if (selectedStudent.getClassId() == (Integer) classInfo[0]) {
+                        selectedClassName = (String) classInfo[1];
+                        break;
+                    }
+                }
+                if (selectedClassName != null) {
+                    formBuilder.setValue(FIELD_CLASS, selectedClassName);
+                }
+            } catch (Exception e) {
+                System.err.println("Error setting class selection: " + e.getMessage());
+            }
+            
             formBuilder.setValue(FIELD_ADDRESS, selectedStudent.getAddress());
         }
     }
@@ -280,7 +302,7 @@ public class StudentManagementPanel extends JPanel {
         String name = formBuilder.getValue(FIELD_NAME).trim();
         String dobStr = formBuilder.getValue(FIELD_DOB).trim();
         String address = formBuilder.getValue(FIELD_ADDRESS).trim();
-        String classIdStr = formBuilder.getValue(FIELD_CLASS_ID).trim();
+        String classSelection = formBuilder.getValue(FIELD_CLASS).trim();
         
         // Validate and parse date
         LocalDate dob;
@@ -290,12 +312,10 @@ public class StudentManagementPanel extends JPanel {
             throw new Exception("Invalid date format. Please use YYYY-MM-DD format.");
         }
         
-        // Validate and parse class ID
-        int classId;
-        try {
-            classId = Integer.parseInt(classIdStr);
-        } catch (NumberFormatException e) {
-            throw new Exception("Class ID must be a number.");
+        // Extract class ID from the selected class string
+        int classId = extractClassIdFromSelection(classSelection);
+        if (classId <= 0) {
+            throw new Exception("Please select a valid class.");
         }
         
         Student student = new Student();
@@ -305,5 +325,50 @@ public class StudentManagementPanel extends JPanel {
         student.setClassId(classId);
         
         return student;
+    }
+    
+    /**
+     * Load available classes for the dropdown
+     */
+    private void loadAvailableClasses() {
+        try {
+            List<Object[]> availableClasses = studentService.getAvailableClasses();
+            
+            // Create class options 
+            String[] classOptions = new String[availableClasses.size()];
+            for (int i = 0; i < availableClasses.size(); i++) {
+                classOptions[i] = (String) availableClasses.get(i)[1];
+            }
+            
+            // Update the class combo box
+            FormField classField = formBuilder.getField(FIELD_CLASS);
+            if (classField != null && classField.getInputComponent() instanceof JComboBox) {
+                @SuppressWarnings("unchecked")
+                JComboBox<String> comboBox = (JComboBox<String>) classField.getInputComponent();
+                comboBox.removeAllItems();
+                for (String option : classOptions) {
+                    comboBox.addItem(option);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading classes: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Extract class ID from the selected class string format "ClassName (GradeLevel)"
+     */
+    private int extractClassIdFromSelection(String classSelection) {
+        try {
+            List<Object[]> availableClasses = studentService.getAvailableClasses();
+            for (Object[] classInfo : availableClasses) {
+                if (classSelection.equals(classInfo[1])) {
+                    return (Integer) classInfo[0];
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error extracting class ID: " + e.getMessage());
+        }
+        return -1;
     }
 }

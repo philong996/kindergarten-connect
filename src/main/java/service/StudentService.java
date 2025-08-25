@@ -1,5 +1,6 @@
 package service;
 
+import dao.ClassDAO;
 import dao.StudentDAO;
 import model.Student;
 import java.util.List;
@@ -92,5 +93,15 @@ public class StudentService {
      */
     public int getStudentCount(int classId) {
         return studentDAO.getStudentCountByClass(classId);
+    }
+    
+    /**
+     * Get available classes for dropdown selection
+     */
+    public List<Object[]> getAvailableClasses() {
+        ClassDAO classDAO = new ClassDAO();
+        return classDAO.findAll().stream()
+                .map(clazz -> new Object[]{clazz.getId(), clazz.getName() + " (" + clazz.getGradeLevel() + ")"})
+                .toList();
     }
 }
