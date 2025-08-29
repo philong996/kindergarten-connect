@@ -85,7 +85,24 @@ CREATE TABLE posts (
     content TEXT NOT NULL,
     author_id INTEGER NOT NULL REFERENCES users(id), -- Teacher who created
     class_id INTEGER REFERENCES classes(id), -- Class this post belongs to
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    photo_attachment BYTEA, -- Binary data for photo uploads
+    photo_filename VARCHAR(255), -- Original filename for the photo
+    scheduled_date DATE, -- For scheduling posts in advance (NULL for immediate)
+    visibility VARCHAR(20) NOT NULL DEFAULT 'ALL' CHECK (visibility IN ('ALL', 'PARENTS_ONLY', 'TEACHERS_ONLY')),
+    is_published BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Comments Table (Parent comments on teacher posts)
+CREATE TABLE comments (
+    id SERIAL PRIMARY KEY,
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    author_id INTEGER NOT NULL REFERENCES users(id), -- Parent who commented
+    content TEXT NOT NULL,
+    is_approved BOOLEAN DEFAULT false, -- For comment moderation
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Messages Table (Simple messaging between teacher-parent)
@@ -140,6 +157,10 @@ CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_students_class_id ON students(class_id);
 CREATE INDEX idx_parents_student_id ON parents(student_id);
 CREATE INDEX idx_posts_class_id ON posts(class_id);
+CREATE INDEX idx_posts_author_id ON posts(author_id);
+CREATE INDEX idx_posts_scheduled_date ON posts(scheduled_date);
+CREATE INDEX idx_comments_post_id ON comments(post_id);
+CREATE INDEX idx_comments_author_id ON comments(author_id);
 CREATE INDEX idx_attendance_student_date ON attendance(student_id, date);
 CREATE INDEX idx_messages_receiver ON messages(receiver_id);
 CREATE INDEX idx_physical_records_student_date ON physical_development_records(student_id, measurement_date);
@@ -180,8 +201,17 @@ INSERT INTO parents (user_id, name, student_id, relationship, phone, email) VALU
 (3, 'Minh Trần', 4, 'Father', '555-6543', 'minhtran@email.com');
 
 -- Insert sample posts
-INSERT INTO posts (title, content, author_id, class_id) VALUES
-('Chào mừng đến lớp Hoa Cúc!', 'Chúng tôi rất vui mừng bắt đầu năm học mới với nhiều hoạt động thú vị.', 2, 1);
+INSERT INTO posts (title, content, author_id, class_id, visibility, is_published) VALUES
+('Chào mừng đến lớp Hoa Cúc!', 'Chúng tôi rất vui mừng bắt đầu năm học mới với nhiều hoạt động thú vị.', 2, 1, 'ALL', true),
+('Thông báo lịch học tuần tới', 'Tuần tới chúng ta sẽ có các hoạt động vui chơi ngoài trời. Các bé cần mang theo nón và nước uống.', 2, 1, 'PARENTS_ONLY', true),
+('Kế hoạch dự án khoa học nhỏ', 'Các bé sẽ tham gia dự án trồng cây và quan sát sự phát triển của cây trong 2 tuần tới.', 2, 1, 'ALL', true);
+
+-- Insert sample comments  
+INSERT INTO comments (post_id, author_id, content, is_approved) VALUES
+(1, 3, 'Cảm ơn cô giáo! Chúng tôi rất mong chờ năm học mới.', true),
+(1, 4, 'Rất vui được tham gia lớp học của cô.', true),
+(2, 3, 'Em sẽ chuẩn bị đầy đủ đồ dùng cho bé.', false),
+(3, 5, 'Dự án này nghe rất thú vị, con em sẽ rất thích.', true);
 
 -- Insert sample attendance
 INSERT INTO attendance (student_id, date, status, check_in_time) VALUES
@@ -267,6 +297,7 @@ COMMENT ON TABLE users IS 'System users: Principal, Teachers, and Parents';
 COMMENT ON TABLE students IS 'Basic student information';
 COMMENT ON TABLE parents IS 'Parent contact information linked to students';
 COMMENT ON TABLE classes IS 'Kindergarten classes with assigned teachers';
-COMMENT ON TABLE posts IS 'Academic posts and announcements by teachers';
+COMMENT ON TABLE posts IS 'Academic posts and announcements by teachers with photo support and scheduling';
+COMMENT ON TABLE comments IS 'Parent comments on teacher posts with moderation support';
 COMMENT ON TABLE messages IS 'Simple messaging between teachers and parents';
 COMMENT ON TABLE attendance IS 'Daily attendance tracking';

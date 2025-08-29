@@ -9,6 +9,7 @@ import ui.panels.PhysicalDevelopmentPanel;
 import ui.panels.AttendancePanel;
 import ui.panels.AttendanceHistoryPanel;
 import ui.panels.ClassManagementPanel;
+import ui.panels.PostsPanel;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -48,6 +49,10 @@ public class TeacherPage extends BaseAuthenticatedPage {
         JPanel attendanceHistoryTab = createAttendanceHistoryTab();
         tabbedPane.addTab("Attendance History", attendanceHistoryTab);
         
+        // Posts tab
+        JPanel postsTab = createPostsTab();
+        tabbedPane.addTab("Class Posts", postsTab);
+        
         // Physical Development tab
         JPanel physicalDevPanel = createPhysicalDevelopmentTab();
         tabbedPane.addTab("Physical Development", physicalDevPanel);
@@ -79,6 +84,18 @@ public class TeacherPage extends BaseAuthenticatedPage {
         
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(historyPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    private JPanel createPostsTab() {
+        int currentUserId = authService.getCurrentUser().getId();
+        String currentUserRole = authService.getCurrentUser().getRole();
+        
+        PostsPanel postsPanel = new PostsPanel(currentUserId, currentUserRole);
+        
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(postsPanel, BorderLayout.CENTER);
         
         return panel;
     }

@@ -6,6 +6,7 @@ import model.Student;
 import ui.components.HeaderPanel;
 import ui.panels.PhysicalDevelopmentPanel;
 import ui.panels.ChildProfilePanel;
+import ui.panels.PostsPanel;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -79,6 +80,7 @@ public class ParentPage extends BaseAuthenticatedPage {
         
         // Add tabs with Child Profile first (default selected)
         tabbedPane.addTab("Child Profile", detailPanel);
+        tabbedPane.addTab("Class Posts", createPostsTab());
         tabbedPane.addTab("Child Development", childDevPanel);
         
         // Set Child Profile as the default selected tab
@@ -268,6 +270,18 @@ public class ParentPage extends BaseAuthenticatedPage {
         
         // This panel will be populated when a child is selected
         // Return the panel that will be updated by updateChildDevelopmentPanel
+        return panel;
+    }
+    
+    private JPanel createPostsTab() {
+        int currentUserId = authService.getCurrentUser().getId();
+        String currentUserRole = authService.getCurrentUser().getRole();
+        
+        PostsPanel postsPanel = new PostsPanel(currentUserId, currentUserRole);
+        
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(postsPanel, BorderLayout.CENTER);
+        
         return panel;
     }
     
