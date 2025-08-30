@@ -1,6 +1,10 @@
 package ui.pages;
 
 import service.AuthService;
+import ui.components.AppColor;
+import ui.components.BackgroundPanel;
+import ui.components.CustomButton;
+import ui.components.CustomFont;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,7 +17,7 @@ import java.awt.event.ActionListener;
 public class LoginWindow extends JFrame {
     private JTextField usernameField;
     private JPasswordField passwordField;
-    private JButton loginButton;
+    private CustomButton loginButton;
     private AuthService authService;
     
     public LoginWindow() {
@@ -25,46 +29,61 @@ public class LoginWindow extends JFrame {
     }
     
     private void initializeComponents() {
-        setTitle("Student Management System - Login");
+        setTitle("Kindergarten Management System - Login");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(450, 350);
+        setSize(550, 500);
         setLocationRelativeTo(null);
         setResizable(false);
         
         usernameField = new JTextField(20);
         passwordField = new JPasswordField(20);
-        loginButton = new JButton("Login");
+        loginButton = new CustomButton("Login");
     }
     
     private void setupLayout() {
         setLayout(new BorderLayout());
         
         // Create main panel
-        JPanel mainPanel = new JPanel(new GridBagLayout());
+        ImageIcon bgIcon = new ImageIcon(getClass().getResource("/images/background01.png"));
+        Image bgImage = bgIcon.getImage();
+        JPanel mainPanel = new BackgroundPanel(bgImage);
+        mainPanel.setBackground(AppColor.getColor("cream"));
         GridBagConstraints gbc = new GridBagConstraints();
-        
-        // Title
-        JLabel titleLabel = new JLabel("Kindergarten Management System");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
+        // logo
+        JLabel logJLabel = new JLabel();
+        ImageIcon icon = new ImageIcon(getClass().getResource("/images/logo.png"));
+        Image img = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+        logJLabel.setIcon(new ImageIcon(img));
         gbc.gridx = 0; gbc.gridy = 0;
         gbc.gridwidth = 2;
-        gbc.insets = new Insets(20, 20, 30, 20);
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 20, 20, 20);
+        mainPanel.add(logJLabel, gbc);
+
+        // Title
+        JLabel titleLabel = new JLabel("Kindergarten BÉ NGOAN");
+        titleLabel.setFont(new Font("Comic Sans MS", Font.BOLD, 20));
+        // titleLabel.setFont(CustomFont.getBalooFont(Font.BOLD, 20f));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(10, 20, 30, 20);
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.fill = GridBagConstraints.NONE;
         mainPanel.add(titleLabel, gbc);
         
         // Username label and field
         gbc.gridwidth = 1;
-        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.gridx = 0; gbc.gridy = 2;
         gbc.insets = new Insets(5, 20, 5, 10);
         gbc.anchor = GridBagConstraints.EAST;
         gbc.weightx = 0.0; // Prevent horizontal expansion for label
         gbc.fill = GridBagConstraints.NONE; // No fill for label
         mainPanel.add(new JLabel("Username:"), gbc);
 
-        gbc.gridx = 1; gbc.gridy = 1;
+        gbc.gridx = 1; gbc.gridy = 2;
         gbc.insets = new Insets(5, 10, 5, 20);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.weightx = 1.0; // Allow horizontal expansion for field
@@ -72,14 +91,14 @@ public class LoginWindow extends JFrame {
         mainPanel.add(usernameField, gbc);
 
         // Password label and field
-        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.gridx = 0; gbc.gridy = 3;
         gbc.insets = new Insets(5, 20, 5, 10);
         gbc.anchor = GridBagConstraints.EAST;
         gbc.weightx = 0.0; // Prevent horizontal expansion for label
         gbc.fill = GridBagConstraints.NONE; // No fill for label
         mainPanel.add(new JLabel("Password:"), gbc);
 
-        gbc.gridx = 1; gbc.gridy = 2;
+        gbc.gridx = 1; gbc.gridy = 3;
         gbc.insets = new Insets(5, 10, 5, 20);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.weightx = 1.0; // Allow horizontal expansion for field
@@ -87,10 +106,12 @@ public class LoginWindow extends JFrame {
         mainPanel.add(passwordField, gbc);
         
         // Login button
-        gbc.gridx = 0; gbc.gridy = 3;
+        gbc.gridx = 0; gbc.gridy = 4;
         gbc.gridwidth = 2;
-        gbc.insets = new Insets(20, 20, 20, 20);
+        gbc.insets = new Insets(20, 20, 5, 20);
         gbc.anchor = GridBagConstraints.CENTER;
+        loginButton.setPreferredSize(new Dimension(100, 50));
+        loginButton.setFont(new Font("Comic Sans MS", Font.BOLD, 14));
         mainPanel.add(loginButton, gbc);
         
         // Add sample credentials info
@@ -103,9 +124,9 @@ public class LoginWindow extends JFrame {
         infoLabel.setFont(new Font("Arial", Font.PLAIN, 10));
         infoLabel.setForeground(Color.GRAY);
 
-        gbc.gridx = 0; gbc.gridy = 4;
+        gbc.gridx = 0; gbc.gridy = 5;
         gbc.gridwidth = 2; // Span across two columns
-        gbc.insets = new Insets(10, 20, 10, 20); // Adjust spacing
+        gbc.insets = new Insets(10, 20, 40, 20); // Adjust spacing
         gbc.anchor = GridBagConstraints.CENTER; // Center the info panel
         gbc.fill = GridBagConstraints.NONE; // Prevent stretching
         mainPanel.add(infoLabel, gbc);
