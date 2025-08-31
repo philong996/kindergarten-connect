@@ -4,7 +4,7 @@ import service.AuthService;
 import ui.components.AppColor;
 import ui.components.BackgroundPanel;
 import ui.components.CustomButton;
-import ui.components.CustomFont;
+import ui.components.CustomMessageDialog;
 
 import javax.swing.*;
 import java.awt.*;
@@ -151,10 +151,9 @@ public class LoginWindow extends JFrame {
         String password = new String(passwordField.getPassword());
         
         if (username.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, 
-                "Please enter both username and password.", 
-                "Login Error", 
-                JOptionPane.ERROR_MESSAGE);
+            CustomMessageDialog.showMessage(this, "Lỗi", 
+                "Please enter both username and password.!", 
+                CustomMessageDialog.Type.ERROR);
             return;
         }
         
@@ -162,12 +161,9 @@ public class LoginWindow extends JFrame {
         try {
             if (authService.login(username, password)) {
                 // Login successful
-                JOptionPane.showMessageDialog(this, 
+                CustomMessageDialog.showMessage(this, "Success", 
                     "Login successful! Welcome, " + authService.getCurrentUser().getRole().toLowerCase() + ".", 
-                    "Success", 
-                    JOptionPane.INFORMATION_MESSAGE);
-                
-                // Open main application window based on role
+                    CustomMessageDialog.Type.SUCCESS);
                 openMainWindow();
                 
                 // Close login window
@@ -175,19 +171,17 @@ public class LoginWindow extends JFrame {
                 
             } else {
                 // Login failed
-                JOptionPane.showMessageDialog(this, 
+                CustomMessageDialog.showMessage(this, "Login Failed", 
                     "Invalid username or password.", 
-                    "Login Failed", 
-                    JOptionPane.ERROR_MESSAGE);
+                    CustomMessageDialog.Type.ERROR);
                 
                 // Clear password field
                 passwordField.setText("");
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, 
-                "Database connection error: " + ex.getMessage(), 
-                "Error", 
-                JOptionPane.ERROR_MESSAGE);
+            CustomMessageDialog.showMessage(this, "Error", 
+                    "Database connection error: " + ex.getMessage(), 
+                    CustomMessageDialog.Type.ERROR);
         }
     }
     
