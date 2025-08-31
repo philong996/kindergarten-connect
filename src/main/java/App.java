@@ -1,7 +1,11 @@
 import util.DatabaseInitializer;
 
+import java.awt.Font;
+
 import javax.swing.*;
 
+import ui.components.AppColor;
+import ui.components.AppStyle;
 import ui.pages.LoginWindow;
 
 /**
@@ -11,6 +15,12 @@ import ui.pages.LoginWindow;
 public class App {
     
     public static void main(String[] args) {
+
+        // Font appFont = CustomFont.getBalooFont(14f);
+        Font appFont = new Font("Comic Sans MS", Font.PLAIN, 14);
+        AppStyle.setUIFont(appFont);
+        AppStyle.setUIForeground(AppColor.getColor("green"));
+
         // Set Look and Feel
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -64,4 +74,5 @@ public class App {
             }
         });
     }
+
 }

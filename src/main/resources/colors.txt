@@ -1,0 +1,5 @@
+yellowOrange=#f6bd60
+green=#4A5759
+pinkOrange=#f28482
+lightPink=#f5cac3
+cream=#f7ede2

@@ -27,19 +27,25 @@ public class HeaderPanel extends JPanel {
     }
     
     private void initializeComponents(String title, String userInfo, String status) {
-        titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+
+        ImageIcon logoIcon = new ImageIcon("src/main/resources/images/logo.png");
+        Image img = logoIcon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
+        ImageIcon scaledIcon = new ImageIcon(img);
+
+        // Tạo titleLabel với icon + text
+        titleLabel = new JLabel(title, scaledIcon, SwingConstants.LEFT);
+        titleLabel.setFont(titleLabel.getFont().deriveFont(24f));
         titleLabel.setForeground(Color.WHITE);
         
         if (userInfo != null) {
             userInfoLabel = new JLabel(userInfo);
-            userInfoLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+            userInfoLabel.setFont(userInfoLabel.getFont().deriveFont(14f));
             userInfoLabel.setForeground(Color.WHITE);
         }
         
         if (status != null) {
             statusLabel = new JLabel(status);
-            statusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+            statusLabel.setFont(statusLabel.getFont().deriveFont(12f));
             statusLabel.setForeground(Color.LIGHT_GRAY);
         }
     }
@@ -86,7 +92,7 @@ public class HeaderPanel extends JPanel {
     public void setUserInfo(String userInfo) {
         if (userInfoLabel == null) {
             userInfoLabel = new JLabel();
-            userInfoLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+            userInfoLabel.setFont(userInfoLabel.getFont().deriveFont(14f));
             userInfoLabel.setForeground(Color.WHITE);
             
             // Refresh layout
@@ -104,8 +110,8 @@ public class HeaderPanel extends JPanel {
     public void setStatus(String status) {
         if (statusLabel == null) {
             statusLabel = new JLabel();
-            statusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-            statusLabel.setForeground(Color.LIGHT_GRAY);
+            statusLabel.setFont(statusLabel.getFont().deriveFont(12f));
+            statusLabel.setForeground(Color.WHITE);
             
             // Refresh layout
             removeAll();
@@ -187,16 +193,16 @@ public class HeaderPanel extends JPanel {
         // Set role-specific colors
         switch (role.toUpperCase()) {
             case "PRINCIPAL":
-                header.setHeaderColor(new Color(142, 68, 173)); // Purple
+                header.setHeaderColor(AppColor.getColor("pinkOrange")); // Purple
                 break;
             case "TEACHER":
-                header.setHeaderColor(new Color(39, 174, 96)); // Green
+                header.setHeaderColor(AppColor.getColor("green")); // Green
                 break;
             case "PARENT":
-                header.setHeaderColor(new Color(230, 126, 34)); // Orange
+                header.setHeaderColor(AppColor.getColor("yellowOrange")); // Orange
                 break;
             default:
-                header.setHeaderColor(new Color(52, 152, 219)); // Default blue
+                header.setHeaderColor(AppColor.getColor("cream")); // Default blue
                 break;
         }
         

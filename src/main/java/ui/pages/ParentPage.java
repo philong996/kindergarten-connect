@@ -3,6 +3,8 @@ package ui.pages;
 import service.AuthService;
 import service.ParentService;
 import model.Student;
+import ui.components.AppColor;
+import ui.components.BackgroundPanel;
 import ui.components.HeaderPanel;
 import ui.panels.PhysicalDevelopmentPanel;
 import ui.panels.ChildProfilePanel;
@@ -44,7 +46,7 @@ public class ParentPage extends BaseAuthenticatedPage {
         if (parentService == null) {
             parentService = new ParentService();
         }
-        
+
         headerPanel = HeaderPanel.createDashboard("Parent", authService.getCurrentUser().getUsername());
         
         // Get children data
@@ -59,6 +61,7 @@ public class ParentPage extends BaseAuthenticatedPage {
         
         // Initialize mainPanel first before using it
         mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(AppColor.getColor("cream"));
         
         // Child Development tab
         childDevPanel = createChildDevelopmentTab();
