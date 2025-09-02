@@ -116,8 +116,8 @@
 ---
 
 ### **Feature 5: Teacher Communication Panel**
-**Deliverable:** Message inbox for parent communication with templates, attachments, and conversation threads  
-- [ ] Implement `TeacherMessagesPanel.java` for teacher communication UI
+**Deliverable:** Message inbox for parent communication with conversations  
+- [ ] Implement `MessagesPanel.java` for teachers and parents communication UI
 - [ ] Add business logic for messaging between teachers and parents in `MessageService.java`
 - [ ] Create `MessageDAO.java` for database operations related to messages, threads, and attachments
 - [ ] Create `Message.java` as the data model for messages with sender, recipient, and thread info

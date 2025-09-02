@@ -2,14 +2,13 @@ package ui.pages;
 
 import service.AuthService;
 import service.StudentService;
-import service.PhysicalDevelopmentService;
 import model.Student;
 import ui.components.HeaderPanel;
 import ui.panels.PhysicalDevelopmentPanel;
 import ui.panels.AttendancePanel;
 import ui.panels.AttendanceHistoryPanel;
-import ui.panels.ClassManagementPanel;
 import ui.panels.PostsPanel;
+import ui.panels.ChatPanel;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -24,6 +23,13 @@ import java.util.List;
 public class TeacherPage extends BaseAuthenticatedPage {
     private HeaderPanel headerPanel;
     private JPanel mainPanel;
+    
+    // Tab constants for better maintainability
+    private static final String TAB_ATTENDANCE = "Daily Attendance";
+    private static final String TAB_ATTENDANCE_HISTORY = "Attendance History";
+    private static final String TAB_POSTS = "Class Posts";
+    private static final String TAB_MESSAGES = "Messages";
+    private static final String TAB_PHYSICAL_DEVELOPMENT = "Physical Development";
     
     public TeacherPage(AuthService authService) {
         super(authService);
@@ -43,19 +49,23 @@ public class TeacherPage extends BaseAuthenticatedPage {
         
         // Attendance tab
         JPanel attendanceTab = createAttendanceTab();
-        tabbedPane.addTab("Daily Attendance", attendanceTab);
+        tabbedPane.addTab(TAB_ATTENDANCE, attendanceTab);
         
         // Attendance History tab
         JPanel attendanceHistoryTab = createAttendanceHistoryTab();
-        tabbedPane.addTab("Attendance History", attendanceHistoryTab);
+        tabbedPane.addTab(TAB_ATTENDANCE_HISTORY, attendanceHistoryTab);
         
         // Posts tab
         JPanel postsTab = createPostsTab();
-        tabbedPane.addTab("Class Posts", postsTab);
+        tabbedPane.addTab(TAB_POSTS, postsTab);
+        
+        // Messages tab
+        JPanel messagesTab = createMessagesTab();
+        tabbedPane.addTab(TAB_MESSAGES, messagesTab);
         
         // Physical Development tab
         JPanel physicalDevPanel = createPhysicalDevelopmentTab();
-        tabbedPane.addTab("Physical Development", physicalDevPanel);
+        tabbedPane.addTab(TAB_PHYSICAL_DEVELOPMENT, physicalDevPanel);
         
         mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
@@ -96,6 +106,18 @@ public class TeacherPage extends BaseAuthenticatedPage {
         
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(postsPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    private JPanel createMessagesTab() {
+        int currentUserId = authService.getCurrentUser().getId();
+        String currentUserRole = authService.getCurrentUser().getRole();
+        
+        ChatPanel chatPanel = new ChatPanel(currentUserId, currentUserRole, authService);
+        
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(chatPanel, BorderLayout.CENTER);
         
         return panel;
     }
@@ -235,22 +257,26 @@ public class TeacherPage extends BaseAuthenticatedPage {
                 if (comp instanceof JTabbedPane) {
                     JTabbedPane tabbedPane = (JTabbedPane) comp;
                     
-                    // Switch to Physical Development tab
-                    tabbedPane.setSelectedIndex(3);
-                    
-                    Component tabComponent = tabbedPane.getComponentAt(3); // Physical Development tab (index 3)
+                    // Find Physical Development tab by title (more robust than hardcoded index)
+                    int physicalDevTabIndex = findTabIndex(tabbedPane, TAB_PHYSICAL_DEVELOPMENT);
+                    if (physicalDevTabIndex != -1) {
+                        tabbedPane.setSelectedIndex(physicalDevTabIndex);
+                        Component tabComponent = tabbedPane.getComponentAt(physicalDevTabIndex);
                     if (tabComponent instanceof JPanel) {
-                        JPanel tabPanel = (JPanel) tabComponent;
-                        Component[] tabComponents = tabPanel.getComponents();
-                        if (tabComponents.length > 0 && tabComponents[0] instanceof JSplitPane) {
-                            JSplitPane splitPane = (JSplitPane) tabComponents[0];
-                            splitPane.setRightComponent(detailsPanel);
-                            splitPane.revalidate();
-                            splitPane.repaint();
-                            // System.out.println("UI updated with student details panel");
-                        } else {
-                            System.out.println("Could not find split pane in tab components");
+                            JPanel tabPanel = (JPanel) tabComponent;
+                            Component[] tabComponents = tabPanel.getComponents();
+                            if (tabComponents.length > 0 && tabComponents[0] instanceof JSplitPane) {
+                                JSplitPane splitPane = (JSplitPane) tabComponents[0];
+                                splitPane.setRightComponent(detailsPanel);
+                                splitPane.revalidate();
+                                splitPane.repaint();
+                                // System.out.println("UI updated with student details panel");
+                            } else {
+                                System.out.println("Could not find split pane in tab components");
+                            }
                         }
+                    } else {
+                        System.out.println("Physical Development tab not found");
                     }
                 }
             }
@@ -309,6 +335,18 @@ public class TeacherPage extends BaseAuthenticatedPage {
         panel.add(new JLabel(student.getAddress() != null ? student.getAddress() : "N/A"), gbc);
         
         return panel;
+    }
+    
+    /**
+     * Helper method to find tab index by title
+     */
+    private int findTabIndex(JTabbedPane tabbedPane, String title) {
+        for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+            if (title.equals(tabbedPane.getTitleAt(i))) {
+                return i;
+            }
+        }
+        return -1; // Tab not found
     }
     
     @Override

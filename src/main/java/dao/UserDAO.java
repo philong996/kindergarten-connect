@@ -104,6 +104,110 @@ public class UserDAO {
     }
     
     /**
+     * Get users by role as Map for UI dropdowns
+     */
+    public List<java.util.Map<String, Object>> getUsersByRole(String role) {
+        List<java.util.Map<String, Object>> users = new ArrayList<>();
+        String sql;
+        
+        if ("parent".equalsIgnoreCase(role)) {
+            // For parents, join with parents table to get the name
+            // Use subquery to get the first parent name to avoid duplicates
+            sql = """
+                SELECT u.id, u.username, 
+                       CASE 
+                           WHEN u.role = 'PARENT' THEN COALESCE(
+                               (SELECT p.name FROM parents p WHERE p.user_id = u.id LIMIT 1), 
+                               u.username
+                           )
+                           ELSE u.username
+                       END as full_name, 
+                       u.role 
+                FROM users u 
+                WHERE u.role = ? 
+                ORDER BY CASE 
+                           WHEN u.role = 'PARENT' THEN COALESCE(
+                               (SELECT p.name FROM parents p WHERE p.user_id = u.id LIMIT 1), 
+                               u.username
+                           )
+                           ELSE u.username
+                       END
+                """;
+        } else {
+            // For teachers and other roles, use username as display name
+            sql = """
+                SELECT u.id, u.username, u.username as full_name, u.role 
+                FROM users u 
+                WHERE u.role = ? 
+                ORDER BY u.username
+                """;
+        }
+        
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, role.toUpperCase());
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    java.util.Map<String, Object> user = new java.util.HashMap<>();
+                    user.put("id", rs.getInt("id"));
+                    user.put("username", rs.getString("username"));
+                    user.put("full_name", rs.getString("full_name"));
+                    user.put("role", rs.getString("role"));
+                    users.add(user);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error finding users by role: " + e.getMessage());
+        }
+        return users;
+    }
+    
+    /**
+     * Get user by ID as Map for role checking
+     */
+    public java.util.Map<String, Object> getUserById(int id) {
+        String sql;
+        
+        // Join with parents table to get the name if it's a parent
+        // Use LIMIT 1 to ensure we get only one result even if parent has multiple children
+        sql = """
+            SELECT u.id, u.username, 
+                   CASE 
+                       WHEN u.role = 'PARENT' THEN COALESCE(
+                           (SELECT p.name FROM parents p WHERE p.user_id = u.id LIMIT 1), 
+                           u.username
+                       )
+                       ELSE u.username
+                   END as full_name, 
+                   u.role 
+            FROM users u 
+            WHERE u.id = ?
+            """;
+        
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, id);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    java.util.Map<String, Object> user = new java.util.HashMap<>();
+                    user.put("id", rs.getInt("id"));
+                    user.put("username", rs.getString("username"));
+                    user.put("full_name", rs.getString("full_name"));
+                    user.put("role", rs.getString("role"));
+                    return user;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error finding user by ID: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
      * Create new user
      */
     public boolean create(User user) {

@@ -4,11 +4,11 @@ import service.AuthService;
 import service.ParentService;
 import model.Student;
 import ui.components.AppColor;
-import ui.components.BackgroundPanel;
 import ui.components.HeaderPanel;
 import ui.panels.PhysicalDevelopmentPanel;
 import ui.panels.ChildProfilePanel;
 import ui.panels.PostsPanel;
+import ui.panels.ChatPanel;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -84,6 +84,7 @@ public class ParentPage extends BaseAuthenticatedPage {
         // Add tabs with Child Profile first (default selected)
         tabbedPane.addTab("Child Profile", detailPanel);
         tabbedPane.addTab("Class Posts", createPostsTab());
+        tabbedPane.addTab("Messages", createMessagesTab());
         tabbedPane.addTab("Child Development", childDevPanel);
         
         // Set Child Profile as the default selected tab
@@ -284,6 +285,18 @@ public class ParentPage extends BaseAuthenticatedPage {
         
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(postsPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    private JPanel createMessagesTab() {
+        int currentUserId = authService.getCurrentUser().getId();
+        String currentUserRole = authService.getCurrentUser().getRole();
+        
+        ChatPanel chatPanel = new ChatPanel(currentUserId, currentUserRole, authService);
+        
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(chatPanel, BorderLayout.CENTER);
         
         return panel;
     }

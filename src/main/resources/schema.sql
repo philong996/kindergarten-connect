@@ -110,13 +110,32 @@ CREATE TABLE comments (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Messages Table (Simple messaging between teacher-parent)
-CREATE TABLE messages (
+-- Conversations Table (Chat conversations between users)
+CREATE TABLE conversations (
     id SERIAL PRIMARY KEY,
+    participant1_id INTEGER NOT NULL REFERENCES users(id),
+    participant2_id INTEGER NOT NULL REFERENCES users(id),
+    last_message TEXT,
+    last_message_at TIMESTAMP,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_participants UNIQUE(participant1_id, participant2_id),
+    CONSTRAINT different_participants CHECK(participant1_id != participant2_id),
+    CONSTRAINT ordered_participants CHECK(participant1_id < participant2_id)
+);
+
+-- Chat Messages Table (Individual messages in conversations)
+CREATE TABLE chat_messages (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id INTEGER NOT NULL REFERENCES users(id),
-    receiver_id INTEGER NOT NULL REFERENCES users(id),
-    content TEXT NOT NULL,
-    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    content TEXT NOT NULL DEFAULT '',
+    attachment BYTEA,
+    attachment_filename VARCHAR(255),
+    attachment_mime_type VARCHAR(100),
+    is_read BOOLEAN NOT NULL DEFAULT false,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP
 );
 
 -- =====================================================
@@ -173,7 +192,19 @@ CREATE INDEX idx_comments_post_id ON comments(post_id);
 CREATE INDEX idx_comments_author_id ON comments(author_id);
 CREATE INDEX idx_attendance_student_date ON attendance(student_id, date);
 CREATE INDEX idx_messages_receiver ON messages(receiver_id);
+CREATE INDEX idx_messages_sender ON messages(sender_id);
+CREATE INDEX idx_messages_read_status ON messages(receiver_id, is_read);
+CREATE INDEX idx_messages_sent_date ON messages(sent_at);
+CREATE INDEX idx_messages_conversation ON messages(sender_id, receiver_id, sent_at);
 CREATE INDEX idx_physical_records_student_date ON physical_development_records(student_id, measurement_date);
+
+-- Chat system indexes
+CREATE INDEX idx_conversations_participant1 ON conversations(participant1_id);
+CREATE INDEX idx_conversations_participant2 ON conversations(participant2_id);
+CREATE INDEX idx_conversations_last_message ON conversations(last_message_at DESC);
+CREATE INDEX idx_chat_messages_conversation ON chat_messages(conversation_id, sent_at);
+CREATE INDEX idx_chat_messages_sender ON chat_messages(sender_id);
+CREATE INDEX idx_chat_messages_unread ON chat_messages(conversation_id, is_read, sender_id);
 
 -- =====================================================
 -- SAMPLE DATA FOR TESTING
