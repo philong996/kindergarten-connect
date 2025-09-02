@@ -5,10 +5,12 @@ import model.Student;
 import service.AttendanceService;
 import dao.AttendanceDAO.AttendanceStats;
 import dao.StudentDAO;
+import util.ImageViewerUtil;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -35,6 +37,9 @@ public class AttendanceHistoryPanel extends JPanel {
     
     private JLabel statsLabel;
     private JLabel titleLabel;
+    
+    // Data storage for attendance records
+    private List<Attendance> currentAttendanceData;
     
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
     
@@ -84,11 +89,11 @@ public class AttendanceHistoryPanel extends JPanel {
         refreshButton = new JButton("Refresh");
         
         // History table
-        String[] columnNames = {"Date", "Status", "Check-in Time", "Late Arrival", "Excuse Reason"};
+        String[] columnNames = {"Date", "Status", "Check-in Time", "Check-out Time", "Late Arrival", "Excuse Reason", "Images"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false;
+                return column == 6; // Only Images column is editable (for button clicks)
             }
         };
         historyTable = new JTable(tableModel);
@@ -102,8 +107,10 @@ public class AttendanceHistoryPanel extends JPanel {
         historyTable.getColumnModel().getColumn(0).setPreferredWidth(100); // Date
         historyTable.getColumnModel().getColumn(1).setPreferredWidth(80);  // Status
         historyTable.getColumnModel().getColumn(2).setPreferredWidth(100); // Check-in
-        historyTable.getColumnModel().getColumn(3).setPreferredWidth(100); // Late arrival
-        historyTable.getColumnModel().getColumn(4).setPreferredWidth(200); // Excuse reason
+        historyTable.getColumnModel().getColumn(3).setPreferredWidth(100); // Check-out
+        historyTable.getColumnModel().getColumn(4).setPreferredWidth(100); // Late arrival
+        historyTable.getColumnModel().getColumn(5).setPreferredWidth(200); // Excuse reason
+        historyTable.getColumnModel().getColumn(6).setPreferredWidth(80);  // Images
         
         tableScrollPane = new JScrollPane(historyTable);
         tableScrollPane.setPreferredSize(new Dimension(600, 300));
@@ -117,6 +124,10 @@ public class AttendanceHistoryPanel extends JPanel {
     private void setupTableColumns() {
         // Set up custom renderer for status column (column index 1)
         historyTable.getColumnModel().getColumn(1).setCellRenderer(new StatusCellRenderer());
+        
+        // Set up custom renderer and editor for images column (column index 6)
+        historyTable.getColumnModel().getColumn(6).setCellRenderer(new ImageButtonRenderer());
+        historyTable.getColumnModel().getColumn(6).setCellEditor(new ImageButtonEditor());
     }
     
     private void layoutComponents() {
@@ -208,6 +219,7 @@ public class AttendanceHistoryPanel extends JPanel {
     
     private void clearResults() {
         tableModel.setRowCount(0);
+        currentAttendanceData = new java.util.ArrayList<>();
         statsLabel.setText("Select a student and date range to view statistics");
         statsLabel.setForeground(Color.BLACK);
     }
@@ -234,6 +246,9 @@ public class AttendanceHistoryPanel extends JPanel {
             // Clear existing data
             tableModel.setRowCount(0);
             
+            // Store current attendance data for image viewing
+            currentAttendanceData = new java.util.ArrayList<>();
+            
             List<Attendance> attendanceHistory;
             if (selectedStudent.getId() == 0) {
                 // All students - get attendance by date range for the class
@@ -256,14 +271,18 @@ public class AttendanceHistoryPanel extends JPanel {
             
             // Populate table
             for (Attendance attendance : attendanceHistory) {
+                currentAttendanceData.add(attendance); // Store for image viewing
                 Object[] row = {
                     attendance.getDate().format(dateFormatter),
                     attendance.getStatus(),
                     attendance.getCheckInTime() != null ? 
                         attendance.getCheckInTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "",
+                    attendance.getCheckOutTime() != null ? 
+                        attendance.getCheckOutTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "",
                     attendance.getLateArrivalTime() != null ? 
                         attendance.getLateArrivalTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "",
-                    attendance.getExcuseReason() != null ? attendance.getExcuseReason() : ""
+                    attendance.getExcuseReason() != null ? attendance.getExcuseReason() : "",
+                    "View" // Images column button
                 };
                 tableModel.addRow(row);
             }
@@ -423,6 +442,158 @@ public class AttendanceHistoryPanel extends JPanel {
         @Override
         public int hashCode() {
             return Integer.hashCode(id);
+        }
+    }
+    
+    // Custom button renderer for images column
+    private class ImageButtonRenderer extends JButton implements TableCellRenderer {
+        public ImageButtonRenderer() {
+            setOpaque(true);
+        }
+        
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            setText("View");
+            return this;
+        }
+    }
+    
+    // Custom button editor for images column
+    private class ImageButtonEditor extends DefaultCellEditor {
+        private JButton button;
+        private int selectedRow;
+        
+        public ImageButtonEditor() {
+            super(new JCheckBox());
+            button = new JButton("View");
+            button.setOpaque(true);
+            button.addActionListener(e -> showAttendanceImages(selectedRow));
+        }
+        
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                boolean isSelected, int row, int column) {
+            selectedRow = row;
+            return button;
+        }
+        
+        @Override
+        public Object getCellEditorValue() {
+            return "View";
+        }
+    }
+    
+    /**
+     * Shows check-in and check-out images for the selected attendance record
+     */
+    private void showAttendanceImages(int row) {
+        if (row >= 0 && row < currentAttendanceData.size()) {
+            Attendance attendance = currentAttendanceData.get(row);
+            
+            JDialog imageDialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), 
+                "Attendance Images - " + attendance.getStudentName() + " (" + 
+                attendance.getDate().format(dateFormatter) + ")", true);
+            imageDialog.setLayout(new BorderLayout());
+            
+            JPanel imagePanel = new JPanel(new GridLayout(1, 2, 10, 10));
+            imagePanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            
+            // Check-in image section
+            JPanel checkInPanel = new JPanel(new BorderLayout());
+            checkInPanel.setBorder(BorderFactory.createTitledBorder("Check-in Image"));
+            
+            JButton viewCheckInBtn = new JButton("View Check-in Image");
+            JLabel checkInStatusLabel = new JLabel("", JLabel.CENTER);
+            
+            viewCheckInBtn.addActionListener(e -> {
+                if (attendance.getCheckInImage() != null) {
+                    ImageViewerUtil.showImage(imageDialog, attendance.getCheckInImage(), 
+                        "Check-in Image - " + attendance.getStudentName() + " (" + 
+                        attendance.getDate().format(dateFormatter) + ")");
+                } else {
+                    JOptionPane.showMessageDialog(imageDialog, "No check-in image available", 
+                        "Information", JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
+            
+            // Set status label
+            if (attendance.getCheckInImage() != null) {
+                checkInStatusLabel.setText("Image available");
+                checkInStatusLabel.setForeground(Color.GREEN.darker());
+            } else {
+                checkInStatusLabel.setText("No image");
+                checkInStatusLabel.setForeground(Color.RED);
+            }
+            
+            checkInPanel.add(viewCheckInBtn, BorderLayout.CENTER);
+            checkInPanel.add(checkInStatusLabel, BorderLayout.SOUTH);
+            
+            // Check-out image section
+            JPanel checkOutPanel = new JPanel(new BorderLayout());
+            checkOutPanel.setBorder(BorderFactory.createTitledBorder("Check-out Image"));
+            
+            JButton viewCheckOutBtn = new JButton("View Check-out Image");
+            JLabel checkOutStatusLabel = new JLabel("", JLabel.CENTER);
+            
+            viewCheckOutBtn.addActionListener(e -> {
+                if (attendance.getCheckOutImage() != null) {
+                    ImageViewerUtil.showImage(imageDialog, attendance.getCheckOutImage(), 
+                        "Check-out Image - " + attendance.getStudentName() + " (" + 
+                        attendance.getDate().format(dateFormatter) + ")");
+                } else {
+                    JOptionPane.showMessageDialog(imageDialog, "No check-out image available", 
+                        "Information", JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
+            
+            // Set status label
+            if (attendance.getCheckOutImage() != null) {
+                checkOutStatusLabel.setText("Image available");
+                checkOutStatusLabel.setForeground(Color.GREEN.darker());
+            } else {
+                checkOutStatusLabel.setText("No image");
+                checkOutStatusLabel.setForeground(Color.RED);
+            }
+            
+            checkOutPanel.add(viewCheckOutBtn, BorderLayout.CENTER);
+            checkOutPanel.add(checkOutStatusLabel, BorderLayout.SOUTH);
+            
+            imagePanel.add(checkInPanel);
+            imagePanel.add(checkOutPanel);
+            
+            // Information panel
+            JPanel infoPanel = new JPanel(new FlowLayout());
+            infoPanel.setBorder(BorderFactory.createTitledBorder("Attendance Information"));
+            
+            String infoText = String.format(
+                "Student: %s | Date: %s | Status: %s | Check-in: %s | Check-out: %s",
+                attendance.getStudentName(),
+                attendance.getDate().format(dateFormatter),
+                attendance.getStatus(),
+                attendance.getCheckInTime() != null ? 
+                    attendance.getCheckInTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "N/A",
+                attendance.getCheckOutTime() != null ? 
+                    attendance.getCheckOutTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "N/A"
+            );
+            
+            JLabel infoLabel = new JLabel(infoText);
+            infoLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+            infoPanel.add(infoLabel);
+            
+            // Close button
+            JButton closeBtn = new JButton("Close");
+            closeBtn.addActionListener(e -> imageDialog.dispose());
+            JPanel closePanel = new JPanel(new FlowLayout());
+            closePanel.add(closeBtn);
+            
+            imageDialog.add(infoPanel, BorderLayout.NORTH);
+            imageDialog.add(imagePanel, BorderLayout.CENTER);
+            imageDialog.add(closePanel, BorderLayout.SOUTH);
+            
+            imageDialog.setSize(600, 350);
+            imageDialog.setLocationRelativeTo(this);
+            imageDialog.setVisible(true);
         }
     }
 }

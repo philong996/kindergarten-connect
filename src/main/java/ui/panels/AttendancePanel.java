@@ -1,21 +1,16 @@
 package ui.panels;
 
 import model.Attendance;
-import model.Student;
 import service.AttendanceService;
 import service.AttendanceService.AttendanceSummary;
-import ui.components.ButtonPanel;
-import ui.components.DataTable;
-import ui.components.DialogFactory;
+import util.CameraUtil;
+import util.ImageViewerUtil;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
-import javax.swing.table.TableCellEditor;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -30,6 +25,7 @@ import java.util.Map;
 public class AttendancePanel extends JPanel {
     private AttendanceService attendanceService;
     private int classId;
+    @SuppressWarnings("unused") // May be used for future authorization features
     private int teacherId;
     private LocalDate selectedDate;
     
@@ -44,6 +40,8 @@ public class AttendancePanel extends JPanel {
     private JButton markAllPresentButton;
     private JButton markAllAbsentButton;
     private JButton viewHistoryButton;
+    private JButton bulkCheckInButton;
+    private JButton bulkCheckOutButton;
     
     private JTable attendanceTable;
     private AttendanceTableModel tableModel;
@@ -96,6 +94,8 @@ public class AttendancePanel extends JPanel {
         markAllPresentButton = new JButton("Mark All Present");
         markAllAbsentButton = new JButton("Mark All Absent");
         viewHistoryButton = new JButton("View History");
+        bulkCheckInButton = new JButton("Bulk Check-in");
+        bulkCheckOutButton = new JButton("Bulk Check-out");
         
         // Attendance table
         tableModel = new AttendanceTableModel();
@@ -116,20 +116,26 @@ public class AttendancePanel extends JPanel {
         attendanceTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(statusCombo));
         
         // Set column widths
-        attendanceTable.getColumnModel().getColumn(0).setPreferredWidth(200); // Student Name
-        attendanceTable.getColumnModel().getColumn(1).setPreferredWidth(100); // Date
-        attendanceTable.getColumnModel().getColumn(2).setPreferredWidth(100); // Status
-        attendanceTable.getColumnModel().getColumn(3).setPreferredWidth(100); // Check-in Time
-        attendanceTable.getColumnModel().getColumn(4).setPreferredWidth(100); // Late Time
-        attendanceTable.getColumnModel().getColumn(5).setPreferredWidth(200); // Excuse Reason
-        attendanceTable.getColumnModel().getColumn(6).setPreferredWidth(80);  // Actions
+        attendanceTable.getColumnModel().getColumn(0).setPreferredWidth(180); // Student Name
+        attendanceTable.getColumnModel().getColumn(1).setPreferredWidth(90);  // Date
+        attendanceTable.getColumnModel().getColumn(2).setPreferredWidth(80);  // Status
+        attendanceTable.getColumnModel().getColumn(3).setPreferredWidth(90);  // Check-in Time
+        attendanceTable.getColumnModel().getColumn(4).setPreferredWidth(90);  // Check-out Time
+        attendanceTable.getColumnModel().getColumn(5).setPreferredWidth(90);  // Late Time
+        attendanceTable.getColumnModel().getColumn(6).setPreferredWidth(150); // Excuse Reason
+        attendanceTable.getColumnModel().getColumn(7).setPreferredWidth(80);  // Images
+        attendanceTable.getColumnModel().getColumn(8).setPreferredWidth(80);  // Actions
         
         // Custom renderer for status column
         attendanceTable.getColumnModel().getColumn(2).setCellRenderer(new StatusCellRenderer());
         
+        // Custom editor for images column
+        attendanceTable.getColumnModel().getColumn(7).setCellRenderer(new ImageButtonRenderer());
+        attendanceTable.getColumnModel().getColumn(7).setCellEditor(new ImageButtonEditor());
+        
         // Custom editor for actions column
-        attendanceTable.getColumnModel().getColumn(6).setCellRenderer(new ActionButtonRenderer());
-        attendanceTable.getColumnModel().getColumn(6).setCellEditor(new ActionButtonEditor());
+        attendanceTable.getColumnModel().getColumn(8).setCellRenderer(new ActionButtonRenderer());
+        attendanceTable.getColumnModel().getColumn(8).setCellEditor(new ActionButtonEditor());
     }
     
     private void layoutComponents() {
@@ -155,6 +161,8 @@ public class AttendancePanel extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttonPanel.add(markAllPresentButton);
         buttonPanel.add(markAllAbsentButton);
+        buttonPanel.add(bulkCheckInButton);
+        buttonPanel.add(bulkCheckOutButton);
         buttonPanel.add(saveAllButton);
         buttonPanel.add(viewHistoryButton);
         
@@ -193,6 +201,12 @@ public class AttendancePanel extends JPanel {
         
         // View history button
         viewHistoryButton.addActionListener(e -> showAttendanceHistory());
+        
+        // Bulk check-in button
+        bulkCheckInButton.addActionListener(e -> performBulkCheckIn());
+        
+        // Bulk check-out button
+        bulkCheckOutButton.addActionListener(e -> performBulkCheckOut());
     }
     
     private void loadAttendanceData() {
@@ -313,18 +327,108 @@ public class AttendancePanel extends JPanel {
                         attendance.setCheckInTime(LocalTime.now());
                         attendance.setLateArrivalTime(null);
                         attendance.setExcuseReason(null);
+                        // Create mock check-in image for bulk operations
+                        if (attendance.getCheckInImage() == null) {
+                            attendance.setCheckInImage(CameraUtil.createMockImage(
+                                "Bulk Check-in: " + attendance.getStudentName(), Color.GREEN));
+                        }
                     } else if ("ABSENT".equals(status)) {
                         attendance.setCheckInTime(null);
+                        attendance.setCheckOutTime(null);
                         attendance.setLateArrivalTime(null);
+                        attendance.setCheckInImage(null);
+                        attendance.setCheckOutImage(null);
                     } else if ("LATE".equals(status)) {
                         attendance.setCheckInTime(LocalTime.now());
                         attendance.setLateArrivalTime(LocalTime.now());
+                        // Create mock check-in image for late students
+                        if (attendance.getCheckInImage() == null) {
+                            attendance.setCheckInImage(CameraUtil.createMockImage(
+                                "Late Check-in: " + attendance.getStudentName(), Color.YELLOW));
+                        }
                     }
                 }
             }
             
             tableModel.fireTableDataChanged();
             updateSummary();
+        }
+    }
+    
+    private void performBulkCheckIn() {
+        int result = JOptionPane.showConfirmDialog(this,
+            "Perform bulk check-in for all present students on " + selectedDate.format(dateFormatter) + "?\n" +
+            "This will capture mock images for all students marked as present.",
+            "Confirm Bulk Check-in",
+            JOptionPane.YES_NO_OPTION);
+        
+        if (result == JOptionPane.YES_OPTION) {
+            int checkedInCount = 0;
+            for (Attendance attendance : attendanceList) {
+                if (attendance != null && "PRESENT".equals(attendance.getStatus()) && 
+                    attendance.getCheckInImage() == null) {
+                    
+                    // Create mock check-in image
+                    byte[] checkInImage = CameraUtil.createMockImage(
+                        "Check-in: " + attendance.getStudentName(), Color.GREEN);
+                    attendance.setCheckInImage(checkInImage);
+                    
+                    if (attendance.getCheckInTime() == null) {
+                        attendance.setCheckInTime(LocalTime.now());
+                    }
+                    checkedInCount++;
+                }
+            }
+            
+            if (checkedInCount > 0) {
+                tableModel.fireTableDataChanged();
+                JOptionPane.showMessageDialog(this,
+                    "Bulk check-in completed for " + checkedInCount + " students!",
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "No students available for bulk check-in.",
+                    "Information",
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    }
+    
+    private void performBulkCheckOut() {
+        int result = JOptionPane.showConfirmDialog(this,
+            "Perform bulk check-out for all checked-in students on " + selectedDate.format(dateFormatter) + "?\n" +
+            "This will capture mock images for all students who have checked in.",
+            "Confirm Bulk Check-out",
+            JOptionPane.YES_NO_OPTION);
+        
+        if (result == JOptionPane.YES_OPTION) {
+            int checkedOutCount = 0;
+            for (Attendance attendance : attendanceList) {
+                if (attendance != null && attendance.getCheckInTime() != null && 
+                    attendance.getCheckOutImage() == null) {
+                    
+                    // Create mock check-out image
+                    byte[] checkOutImage = CameraUtil.createMockImage(
+                        "Check-out: " + attendance.getStudentName(), Color.ORANGE);
+                    attendance.setCheckOutImage(checkOutImage);
+                    attendance.setCheckOutTime(LocalTime.now());
+                    checkedOutCount++;
+                }
+            }
+            
+            if (checkedOutCount > 0) {
+                tableModel.fireTableDataChanged();
+                JOptionPane.showMessageDialog(this,
+                    "Bulk check-out completed for " + checkedOutCount + " students!",
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "No students available for bulk check-out.",
+                    "Information",
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
         }
     }
     
@@ -352,10 +456,43 @@ public class AttendancePanel extends JPanel {
             if (detailDialog.showDialog()) {
                 // Update the attendance record with details from dialog
                 Attendance updatedAttendance = detailDialog.getAttendance();
-                attendanceList.set(row, updatedAttendance);
-                attendanceMap.put(updatedAttendance.getStudentId(), updatedAttendance);
-                tableModel.fireTableRowsUpdated(row, row);
-                updateSummary();
+                
+                try {
+                    // Save the updated attendance to the database
+                    boolean success;
+                    if (updatedAttendance.getId() > 0) {
+                        // Update existing record
+                        success = attendanceService.updateAttendance(updatedAttendance);
+                    } else {
+                        // Create new record if it doesn't exist
+                        success = attendanceService.markAttendance(updatedAttendance);
+                    }
+                    
+                    if (success) {
+                        // Update the in-memory data
+                        attendanceList.set(row, updatedAttendance);
+                        attendanceMap.put(updatedAttendance.getStudentId(), updatedAttendance);
+                        tableModel.fireTableRowsUpdated(row, row);
+                        updateSummary();
+                        
+                        JOptionPane.showMessageDialog(this,
+                            "Attendance updated successfully!",
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(this,
+                            "Failed to save attendance changes to database.\nPlease check the console for details.",
+                            "Database Error",
+                            JOptionPane.ERROR_MESSAGE);
+                    }
+                    
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(this,
+                        "Error saving attendance: " + e.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -363,7 +500,7 @@ public class AttendancePanel extends JPanel {
     // Custom table model for attendance
     private class AttendanceTableModel extends DefaultTableModel {
         private final String[] columnNames = {
-            "Student Name", "Date", "Status", "Check-in Time", "Late Arrival", "Excuse Reason", "Actions"
+            "Student Name", "Date", "Status", "Check-in Time", "Check-out Time", "Late Arrival", "Excuse Reason", "Images", "Actions"
         };
         
         @Override
@@ -394,10 +531,13 @@ public class AttendancePanel extends JPanel {
                 case 2: return attendance.getStatus();
                 case 3: return attendance.getCheckInTime() != null ? 
                         attendance.getCheckInTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "";
-                case 4: return attendance.getLateArrivalTime() != null ? 
+                case 4: return attendance.getCheckOutTime() != null ? 
+                        attendance.getCheckOutTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "";
+                case 5: return attendance.getLateArrivalTime() != null ? 
                         attendance.getLateArrivalTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "";
-                case 5: return attendance.getExcuseReason() != null ? attendance.getExcuseReason() : "";
-                case 6: return "Edit";
+                case 6: return attendance.getExcuseReason() != null ? attendance.getExcuseReason() : "";
+                case 7: return "View";
+                case 8: return "Edit";
                 default: return null;
             }
         }
@@ -422,7 +562,10 @@ public class AttendancePanel extends JPanel {
                         attendance.setLateArrivalTime(null);
                     } else if ("ABSENT".equals(newStatus)) {
                         attendance.setCheckInTime(null);
+                        attendance.setCheckOutTime(null);
                         attendance.setLateArrivalTime(null);
+                        attendance.setCheckInImage(null);
+                        attendance.setCheckOutImage(null);
                     } else if ("LATE".equals(newStatus)) {
                         if (attendance.getLateArrivalTime() == null) {
                             attendance.setLateArrivalTime(LocalTime.now());
@@ -436,7 +579,7 @@ public class AttendancePanel extends JPanel {
                     fireTableRowsUpdated(row, row);
                     break;
                     
-                case 5: // Excuse Reason
+                case 6: // Excuse Reason
                     attendance.setExcuseReason((String) value);
                     break;
             }
@@ -444,12 +587,12 @@ public class AttendancePanel extends JPanel {
         
         @Override
         public boolean isCellEditable(int row, int column) {
-            return column == 2 || column == 5 || column == 6; // Status, Excuse Reason, and Actions
+            return column == 2 || column == 6 || column == 7 || column == 8; // Status, Excuse Reason, Images, and Actions
         }
         
         @Override
         public Class<?> getColumnClass(int column) {
-            if (column == 6) return JButton.class;
+            if (column == 7 || column == 8) return JButton.class;
             return String.class;
         }
     }
@@ -515,6 +658,275 @@ public class AttendancePanel extends JPanel {
         @Override
         public Object getCellEditorValue() {
             return "Edit";
+        }
+    }
+    
+    // Custom button renderer for images column
+    private class ImageButtonRenderer extends JButton implements TableCellRenderer {
+        public ImageButtonRenderer() {
+            setOpaque(true);
+        }
+        
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            setText("View");
+            return this;
+        }
+    }
+    
+    // Custom button editor for images column
+    private class ImageButtonEditor extends DefaultCellEditor {
+        private JButton button;
+        private int selectedRow;
+        
+        public ImageButtonEditor() {
+            super(new JCheckBox());
+            button = new JButton("View");
+            button.setOpaque(true);
+            button.addActionListener(e -> showAttendanceImages(selectedRow));
+        }
+        
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                boolean isSelected, int row, int column) {
+            selectedRow = row;
+            return button;
+        }
+        
+        @Override
+        public Object getCellEditorValue() {
+            return "View";
+        }
+    }
+    
+    /**
+     * Shows check-in and check-out images for the selected student
+     */
+    private void showAttendanceImages(int row) {
+        if (row >= 0 && row < attendanceList.size()) {
+            Attendance attendance = attendanceList.get(row);
+            
+            JDialog imageDialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), 
+                "Attendance Images - " + attendance.getStudentName(), true);
+            imageDialog.setLayout(new BorderLayout());
+            
+            JPanel imagePanel = new JPanel(new GridLayout(2, 2, 10, 10));
+            imagePanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            
+            // Check-in image section
+            JPanel checkInPanel = new JPanel(new BorderLayout());
+            checkInPanel.setBorder(BorderFactory.createTitledBorder("Check-in Image"));
+            
+            JButton viewCheckInBtn = new JButton("View Check-in Image");
+            JButton captureCheckInBtn = new JButton("Capture Check-in");
+            
+            viewCheckInBtn.addActionListener(e -> {
+                if (attendance.getCheckInImage() != null) {
+                    ImageViewerUtil.showImage(imageDialog, attendance.getCheckInImage(), 
+                        "Check-in Image - " + attendance.getStudentName());
+                } else {
+                    JOptionPane.showMessageDialog(imageDialog, "No check-in image available", 
+                        "Information", JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
+            
+            captureCheckInBtn.addActionListener(e -> {
+                byte[] imageData = CameraUtil.captureImage(imageDialog, "Capture Check-in Image");
+                if (imageData != null) {
+                    attendance.setCheckInImage(imageData);
+                    if (attendance.getCheckInTime() == null) {
+                        attendance.setCheckInTime(LocalTime.now());
+                    }
+                    if ("ABSENT".equals(attendance.getStatus())) {
+                        attendance.setStatus("PRESENT");
+                    }
+                    
+                    // Save to database immediately
+                    try {
+                        boolean success;
+                        if (attendance.getId() > 0) {
+                            success = attendanceService.updateAttendance(attendance);
+                        } else {
+                            success = attendanceService.markAttendance(attendance);
+                        }
+                        
+                        if (success) {
+                            tableModel.fireTableRowsUpdated(row, row);
+                            updateSummary();
+                            JOptionPane.showMessageDialog(imageDialog, "Check-in image captured and saved successfully!", 
+                                "Success", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(imageDialog, "Image captured but failed to save to database. Please try 'Save All Changes'.", 
+                                "Warning", JOptionPane.WARNING_MESSAGE);
+                        }
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(imageDialog, "Error saving image: " + ex.getMessage(), 
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                        ex.printStackTrace();
+                    }
+                }
+            });
+            
+            checkInPanel.add(viewCheckInBtn, BorderLayout.NORTH);
+            checkInPanel.add(captureCheckInBtn, BorderLayout.SOUTH);
+            
+            // Check-out image section
+            JPanel checkOutPanel = new JPanel(new BorderLayout());
+            checkOutPanel.setBorder(BorderFactory.createTitledBorder("Check-out Image"));
+            
+            JButton viewCheckOutBtn = new JButton("View Check-out Image");
+            JButton captureCheckOutBtn = new JButton("Capture Check-out");
+            
+            viewCheckOutBtn.addActionListener(e -> {
+                if (attendance.getCheckOutImage() != null) {
+                    ImageViewerUtil.showImage(imageDialog, attendance.getCheckOutImage(), 
+                        "Check-out Image - " + attendance.getStudentName());
+                } else {
+                    JOptionPane.showMessageDialog(imageDialog, "No check-out image available", 
+                        "Information", JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
+            
+            captureCheckOutBtn.addActionListener(e -> {
+                if (attendance.getCheckInTime() == null) {
+                    JOptionPane.showMessageDialog(imageDialog, 
+                        "Student must check-in before check-out", 
+                        "Warning", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                
+                byte[] imageData = CameraUtil.captureImage(imageDialog, "Capture Check-out Image");
+                if (imageData != null) {
+                    attendance.setCheckOutImage(imageData);
+                    attendance.setCheckOutTime(LocalTime.now());
+                    
+                    // Save to database immediately
+                    try {
+                        boolean success;
+                        if (attendance.getId() > 0) {
+                            success = attendanceService.updateAttendance(attendance);
+                        } else {
+                            success = attendanceService.markAttendance(attendance);
+                        }
+                        
+                        if (success) {
+                            tableModel.fireTableRowsUpdated(row, row);
+                            JOptionPane.showMessageDialog(imageDialog, "Check-out image captured and saved successfully!", 
+                                "Success", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(imageDialog, "Image captured but failed to save to database. Please try 'Save All Changes'.", 
+                                "Warning", JOptionPane.WARNING_MESSAGE);
+                        }
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(imageDialog, "Error saving image: " + ex.getMessage(), 
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                        ex.printStackTrace();
+                    }
+                }
+            });
+            
+            checkOutPanel.add(viewCheckOutBtn, BorderLayout.NORTH);
+            checkOutPanel.add(captureCheckOutBtn, BorderLayout.SOUTH);
+            
+            imagePanel.add(checkInPanel);
+            imagePanel.add(checkOutPanel);
+            
+            // Quick actions panel
+            JPanel quickActionsPanel = new JPanel(new FlowLayout());
+            quickActionsPanel.setBorder(BorderFactory.createTitledBorder("Quick Actions"));
+            
+            JButton quickCheckInBtn = new JButton("Quick Check-in");
+            JButton quickCheckOutBtn = new JButton("Quick Check-out");
+            
+            quickCheckInBtn.addActionListener(e -> {
+                byte[] imageData = CameraUtil.createMockImage("Check-in: " + LocalTime.now().format(
+                    DateTimeFormatter.ofPattern("HH:mm")), Color.GREEN);
+                attendance.setCheckInImage(imageData);
+                attendance.setCheckInTime(LocalTime.now());
+                if ("ABSENT".equals(attendance.getStatus())) {
+                    attendance.setStatus("PRESENT");
+                }
+                
+                // Save to database immediately
+                try {
+                    boolean success;
+                    if (attendance.getId() > 0) {
+                        success = attendanceService.updateAttendance(attendance);
+                    } else {
+                        success = attendanceService.markAttendance(attendance);
+                    }
+                    
+                    if (success) {
+                        tableModel.fireTableRowsUpdated(row, row);
+                        updateSummary();
+                        JOptionPane.showMessageDialog(imageDialog, "Quick check-in completed and saved!", 
+                            "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(imageDialog, "Quick check-in completed but failed to save to database. Please try 'Save All Changes'.", 
+                            "Warning", JOptionPane.WARNING_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(imageDialog, "Error saving quick check-in: " + ex.getMessage(), 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                }
+            });
+            
+            quickCheckOutBtn.addActionListener(e -> {
+                if (attendance.getCheckInTime() == null) {
+                    JOptionPane.showMessageDialog(imageDialog, 
+                        "Student must check-in before check-out", 
+                        "Warning", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                
+                byte[] imageData = CameraUtil.createMockImage("Check-out: " + LocalTime.now().format(
+                    DateTimeFormatter.ofPattern("HH:mm")), Color.ORANGE);
+                attendance.setCheckOutImage(imageData);
+                attendance.setCheckOutTime(LocalTime.now());
+                
+                // Save to database immediately
+                try {
+                    boolean success;
+                    if (attendance.getId() > 0) {
+                        success = attendanceService.updateAttendance(attendance);
+                    } else {
+                        success = attendanceService.markAttendance(attendance);
+                    }
+                    
+                    if (success) {
+                        tableModel.fireTableRowsUpdated(row, row);
+                        JOptionPane.showMessageDialog(imageDialog, "Quick check-out completed and saved!", 
+                            "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(imageDialog, "Quick check-out completed but failed to save to database. Please try 'Save All Changes'.", 
+                            "Warning", JOptionPane.WARNING_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(imageDialog, "Error saving quick check-out: " + ex.getMessage(), 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                }
+            });
+            
+            quickActionsPanel.add(quickCheckInBtn);
+            quickActionsPanel.add(quickCheckOutBtn);
+            
+            imagePanel.add(quickActionsPanel);
+            
+            // Close button
+            JButton closeBtn = new JButton("Close");
+            closeBtn.addActionListener(e -> imageDialog.dispose());
+            JPanel closePanel = new JPanel(new FlowLayout());
+            closePanel.add(closeBtn);
+            
+            imageDialog.add(imagePanel, BorderLayout.CENTER);
+            imageDialog.add(closePanel, BorderLayout.SOUTH);
+            
+            imageDialog.setSize(600, 400);
+            imageDialog.setLocationRelativeTo(this);
+            imageDialog.setVisible(true);
         }
     }
 }

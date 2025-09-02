@@ -78,8 +78,48 @@ public class AttendanceService {
             throw new IllegalArgumentException("Invalid attendance ID");
         }
         
-        // Apply same validation as markAttendance
-        return markAttendance(attendance) && attendanceDAO.update(attendance);
+        // Validate input (same validation as markAttendance but without creating)
+        if (attendance.getStudentId() <= 0) {
+            throw new IllegalArgumentException("Invalid student ID");
+        }
+        
+        if (attendance.getDate() == null) {
+            throw new IllegalArgumentException("Date is required");
+        }
+        
+        if (attendance.getStatus() == null || attendance.getStatus().trim().isEmpty()) {
+            throw new IllegalArgumentException("Status is required");
+        }
+        
+        // Validate status
+        String status = attendance.getStatus().toUpperCase();
+        if (!status.equals("PRESENT") && !status.equals("ABSENT") && !status.equals("LATE")) {
+            throw new IllegalArgumentException("Invalid status. Must be PRESENT, ABSENT, or LATE");
+        }
+        attendance.setStatus(status);
+        
+        // Validate check-in time for present students
+        if ("PRESENT".equals(status) && attendance.getCheckInTime() == null) {
+            attendance.setCheckInTime(LocalTime.now());
+        }
+        
+        // Validate late arrival time for late students
+        if ("LATE".equals(status)) {
+            if (attendance.getLateArrivalTime() == null) {
+                attendance.setLateArrivalTime(LocalTime.now());
+            }
+            if (attendance.getCheckInTime() == null) {
+                attendance.setCheckInTime(attendance.getLateArrivalTime());
+            }
+        }
+        
+        // Clear check-in time for absent students
+        if ("ABSENT".equals(status)) {
+            attendance.setCheckInTime(null);
+            attendance.setLateArrivalTime(null);
+        }
+        
+        return attendanceDAO.update(attendance);
     }
     
     /**

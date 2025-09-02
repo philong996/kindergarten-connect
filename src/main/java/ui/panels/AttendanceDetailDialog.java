@@ -1,6 +1,8 @@
 package ui.panels;
 
 import model.Attendance;
+import util.CameraUtil;
+import util.ImageViewerUtil;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -21,10 +23,15 @@ public class AttendanceDetailDialog extends JDialog {
     private JLabel dateLabel;
     private JComboBox<String> statusCombo;
     private JTextField checkInTimeField;
+    private JTextField checkOutTimeField;
     private JTextField lateArrivalTimeField;
     private JTextArea excuseReasonArea;
     private JButton saveButton;
     private JButton cancelButton;
+    private JButton viewCheckInImageButton;
+    private JButton captureCheckInImageButton;
+    private JButton viewCheckOutImageButton;
+    private JButton captureCheckOutImageButton;
     
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
     
@@ -50,8 +57,11 @@ public class AttendanceDetailDialog extends JDialog {
         this.attendance.setDate(source.getDate());
         this.attendance.setStatus(source.getStatus());
         this.attendance.setCheckInTime(source.getCheckInTime());
+        this.attendance.setCheckOutTime(source.getCheckOutTime());
         this.attendance.setLateArrivalTime(source.getLateArrivalTime());
         this.attendance.setExcuseReason(source.getExcuseReason());
+        this.attendance.setCheckInImage(source.getCheckInImage());
+        this.attendance.setCheckOutImage(source.getCheckOutImage());
         this.attendance.setCreatedAt(source.getCreatedAt());
     }
     
@@ -67,12 +77,21 @@ public class AttendanceDetailDialog extends JDialog {
         checkInTimeField = new JTextField(10);
         checkInTimeField.setToolTipText("Format: HH:MM (24-hour)");
         
+        checkOutTimeField = new JTextField(10);
+        checkOutTimeField.setToolTipText("Format: HH:MM (24-hour)");
+        
         lateArrivalTimeField = new JTextField(10);
         lateArrivalTimeField.setToolTipText("Format: HH:MM (24-hour)");
         
         excuseReasonArea = new JTextArea(4, 20);
         excuseReasonArea.setLineWrap(true);
         excuseReasonArea.setWrapStyleWord(true);
+        
+        // Image buttons
+        viewCheckInImageButton = new JButton("View");
+        captureCheckInImageButton = new JButton("Capture");
+        viewCheckOutImageButton = new JButton("View");
+        captureCheckOutImageButton = new JButton("Capture");
         
         saveButton = new JButton("Save");
         cancelButton = new JButton("Cancel");
@@ -105,16 +124,36 @@ public class AttendanceDetailDialog extends JDialog {
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         formPanel.add(checkInTimeField, gbc);
         
-        // Late arrival time
+        // Check-in image buttons
+        gbc.gridx = 2; gbc.fill = GridBagConstraints.NONE;
+        JPanel checkInImagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        checkInImagePanel.add(viewCheckInImageButton);
+        checkInImagePanel.add(captureCheckInImageButton);
+        formPanel.add(checkInImagePanel, gbc);
+        
+        // Check-out time
         gbc.gridx = 0; gbc.gridy = 2; gbc.anchor = GridBagConstraints.WEST;
+        formPanel.add(new JLabel("Check-out Time:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        formPanel.add(checkOutTimeField, gbc);
+        
+        // Check-out image buttons
+        gbc.gridx = 2; gbc.fill = GridBagConstraints.NONE;
+        JPanel checkOutImagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        checkOutImagePanel.add(viewCheckOutImageButton);
+        checkOutImagePanel.add(captureCheckOutImageButton);
+        formPanel.add(checkOutImagePanel, gbc);
+        
+        // Late arrival time
+        gbc.gridx = 0; gbc.gridy = 3; gbc.anchor = GridBagConstraints.WEST;
         formPanel.add(new JLabel("Late Arrival Time:"), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         formPanel.add(lateArrivalTimeField, gbc);
         
         // Excuse reason
-        gbc.gridx = 0; gbc.gridy = 3; gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.gridx = 0; gbc.gridy = 4; gbc.anchor = GridBagConstraints.NORTHWEST;
         formPanel.add(new JLabel("Excuse Reason:"), gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.BOTH; gbc.weightx = 1.0; gbc.weighty = 1.0;
+        gbc.gridx = 1; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.BOTH; gbc.weightx = 1.0; gbc.weighty = 1.0;
         formPanel.add(new JScrollPane(excuseReasonArea), gbc);
         
         // Button panel
@@ -129,6 +168,58 @@ public class AttendanceDetailDialog extends JDialog {
     
     private void setupEventHandlers() {
         statusCombo.addActionListener(e -> updateFieldsBasedOnStatus());
+        
+        // Image button handlers
+        viewCheckInImageButton.addActionListener(e -> {
+            if (attendance.getCheckInImage() != null) {
+                ImageViewerUtil.showImage(this, attendance.getCheckInImage(), 
+                    "Check-in Image - " + attendance.getStudentName());
+            } else {
+                JOptionPane.showMessageDialog(this, "No check-in image available", 
+                    "Information", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+        
+        captureCheckInImageButton.addActionListener(e -> {
+            byte[] imageData = CameraUtil.captureImage(this, "Capture Check-in Image");
+            if (imageData != null) {
+                attendance.setCheckInImage(imageData);
+                if (attendance.getCheckInTime() == null) {
+                    checkInTimeField.setText(LocalTime.now().format(timeFormatter));
+                }
+                JOptionPane.showMessageDialog(this, "Check-in image captured!", 
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+        
+        viewCheckOutImageButton.addActionListener(e -> {
+            if (attendance.getCheckOutImage() != null) {
+                ImageViewerUtil.showImage(this, attendance.getCheckOutImage(), 
+                    "Check-out Image - " + attendance.getStudentName());
+            } else {
+                JOptionPane.showMessageDialog(this, "No check-out image available", 
+                    "Information", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+        
+        captureCheckOutImageButton.addActionListener(e -> {
+            if (attendance.getCheckInTime() == null && checkInTimeField.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Student must check-in before check-out", 
+                    "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            byte[] imageData = CameraUtil.captureImage(this, "Capture Check-out Image");
+            if (imageData != null) {
+                attendance.setCheckOutImage(imageData);
+                if (attendance.getCheckOutTime() == null) {
+                    checkOutTimeField.setText(LocalTime.now().format(timeFormatter));
+                }
+                JOptionPane.showMessageDialog(this, "Check-out image captured!", 
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
         
         saveButton.addActionListener(e -> {
             if (validateAndSaveData()) {
@@ -150,6 +241,10 @@ public class AttendanceDetailDialog extends JDialog {
             checkInTimeField.setText(attendance.getCheckInTime().format(timeFormatter));
         }
         
+        if (attendance.getCheckOutTime() != null) {
+            checkOutTimeField.setText(attendance.getCheckOutTime().format(timeFormatter));
+        }
+        
         if (attendance.getLateArrivalTime() != null) {
             lateArrivalTimeField.setText(attendance.getLateArrivalTime().format(timeFormatter));
         }
@@ -167,23 +262,33 @@ public class AttendanceDetailDialog extends JDialog {
         switch (status) {
             case "PRESENT":
                 checkInTimeField.setEnabled(true);
+                checkOutTimeField.setEnabled(true);
                 lateArrivalTimeField.setEnabled(false);
                 lateArrivalTimeField.setText("");
                 excuseReasonArea.setEnabled(false);
+                captureCheckInImageButton.setEnabled(true);
+                captureCheckOutImageButton.setEnabled(true);
                 break;
                 
             case "ABSENT":
                 checkInTimeField.setEnabled(false);
                 checkInTimeField.setText("");
+                checkOutTimeField.setEnabled(false);
+                checkOutTimeField.setText("");
                 lateArrivalTimeField.setEnabled(false);
                 lateArrivalTimeField.setText("");
                 excuseReasonArea.setEnabled(true);
+                captureCheckInImageButton.setEnabled(false);
+                captureCheckOutImageButton.setEnabled(false);
                 break;
                 
             case "LATE":
                 checkInTimeField.setEnabled(true);
+                checkOutTimeField.setEnabled(true);
                 lateArrivalTimeField.setEnabled(true);
                 excuseReasonArea.setEnabled(true);
+                captureCheckInImageButton.setEnabled(true);
+                captureCheckOutImageButton.setEnabled(true);
                 break;
         }
     }
@@ -208,6 +313,23 @@ public class AttendanceDetailDialog extends JDialog {
                 }
             } else {
                 attendance.setCheckInTime(null);
+            }
+            
+            // Validate and set check-out time
+            String checkOutText = checkOutTimeField.getText().trim();
+            if (!checkOutText.isEmpty()) {
+                try {
+                    LocalTime checkOutTime = LocalTime.parse(checkOutText, timeFormatter);
+                    attendance.setCheckOutTime(checkOutTime);
+                } catch (DateTimeParseException e) {
+                    JOptionPane.showMessageDialog(this,
+                        "Invalid check-out time format. Please use HH:MM format.",
+                        "Validation Error",
+                        JOptionPane.ERROR_MESSAGE);
+                    return false;
+                }
+            } else {
+                attendance.setCheckOutTime(null);
             }
             
             // Validate and set late arrival time

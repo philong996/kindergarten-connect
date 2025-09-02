@@ -17,7 +17,12 @@ public class Attendance {
     
     // New fields for enhanced attendance tracking
     private LocalTime lateArrivalTime;
+    private LocalTime checkOutTime;
     private String excuseReason;
+    
+    // Image fields for check-in and check-out verification (stored as binary data)
+    private byte[] checkInImage;
+    private byte[] checkOutImage;
     
     // Additional fields for display
     private String studentName;
@@ -34,13 +39,17 @@ public class Attendance {
     
     // Enhanced constructor with new fields
     public Attendance(int studentId, LocalDate date, String status, LocalTime checkInTime, 
-                     LocalTime lateArrivalTime, String excuseReason) {
+                     LocalTime lateArrivalTime, LocalTime checkOutTime, String excuseReason,
+                     byte[] checkInImage, byte[] checkOutImage) {
         this.studentId = studentId;
         this.date = date;
         this.status = status;
         this.checkInTime = checkInTime;
         this.lateArrivalTime = lateArrivalTime;
+        this.checkOutTime = checkOutTime;
         this.excuseReason = excuseReason;
+        this.checkInImage = checkInImage;
+        this.checkOutImage = checkOutImage;
     }
     
     // Full constructor
@@ -56,15 +65,18 @@ public class Attendance {
     
     // Enhanced full constructor with all fields
     public Attendance(int id, int studentId, LocalDate date, String status, 
-                     LocalTime checkInTime, LocalTime lateArrivalTime, String excuseReason,
-                     LocalDateTime createdAt) {
+                     LocalTime checkInTime, LocalTime lateArrivalTime, LocalTime checkOutTime, String excuseReason,
+                     byte[] checkInImage, byte[] checkOutImage, LocalDateTime createdAt) {
         this.id = id;
         this.studentId = studentId;
         this.date = date;
         this.status = status;
         this.checkInTime = checkInTime;
         this.lateArrivalTime = lateArrivalTime;
+        this.checkOutTime = checkOutTime;
         this.excuseReason = excuseReason;
+        this.checkInImage = checkInImage;
+        this.checkOutImage = checkOutImage;
         this.createdAt = createdAt;
     }
     
@@ -93,8 +105,17 @@ public class Attendance {
     public LocalTime getLateArrivalTime() { return lateArrivalTime; }
     public void setLateArrivalTime(LocalTime lateArrivalTime) { this.lateArrivalTime = lateArrivalTime; }
     
+    public LocalTime getCheckOutTime() { return checkOutTime; }
+    public void setCheckOutTime(LocalTime checkOutTime) { this.checkOutTime = checkOutTime; }
+    
     public String getExcuseReason() { return excuseReason; }
     public void setExcuseReason(String excuseReason) { this.excuseReason = excuseReason; }
+    
+    public byte[] getCheckInImage() { return checkInImage; }
+    public void setCheckInImage(byte[] checkInImage) { this.checkInImage = checkInImage; }
+    
+    public byte[] getCheckOutImage() { return checkOutImage; }
+    public void setCheckOutImage(byte[] checkOutImage) { this.checkOutImage = checkOutImage; }
     
     // Helper methods
     public boolean isPresent() { return "PRESENT".equals(status); }

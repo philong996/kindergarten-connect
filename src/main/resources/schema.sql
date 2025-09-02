@@ -5,8 +5,11 @@
 
 -- Drop tables if they exist (for clean reinstall)
 DROP TABLE IF EXISTS attendance CASCADE;
-DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS chat_messages CASCADE;
+DROP TABLE IF EXISTS conversations CASCADE;
+DROP TABLE IF EXISTS comments CASCADE;
 DROP TABLE IF EXISTS posts CASCADE;
+DROP TABLE IF EXISTS physical_development_records CASCADE;
 DROP TABLE IF EXISTS students CASCADE;
 DROP TABLE IF EXISTS parents CASCADE;
 DROP TABLE IF EXISTS classes CASCADE;
@@ -142,15 +145,18 @@ CREATE TABLE chat_messages (
 -- ATTENDANCE TRACKING - WEEK 2
 -- =====================================================
 
--- Attendance Table (Basic attendance marking)
+-- Attendance Table (Enhanced with check-in/check-out and image support)
 CREATE TABLE attendance (
     id SERIAL PRIMARY KEY,
     student_id INTEGER NOT NULL REFERENCES students(id),
     date DATE NOT NULL,
     status VARCHAR(20) NOT NULL CHECK (status IN ('PRESENT', 'ABSENT', 'LATE')),
     check_in_time TIME,
+    check_out_time TIME, -- Time when student checked out
     late_arrival_time TIME, -- Time when late student actually arrived
     excuse_reason TEXT, -- Reason for absence or lateness
+    check_in_image BYTEA, -- Image captured during check-in
+    check_out_image BYTEA, -- Image captured during check-out
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(student_id, date)
 );
@@ -191,11 +197,6 @@ CREATE INDEX idx_posts_type_pinned ON posts(post_type, is_pinned, created_at); -
 CREATE INDEX idx_comments_post_id ON comments(post_id);
 CREATE INDEX idx_comments_author_id ON comments(author_id);
 CREATE INDEX idx_attendance_student_date ON attendance(student_id, date);
-CREATE INDEX idx_messages_receiver ON messages(receiver_id);
-CREATE INDEX idx_messages_sender ON messages(sender_id);
-CREATE INDEX idx_messages_read_status ON messages(receiver_id, is_read);
-CREATE INDEX idx_messages_sent_date ON messages(sent_at);
-CREATE INDEX idx_messages_conversation ON messages(sender_id, receiver_id, sent_at);
 CREATE INDEX idx_physical_records_student_date ON physical_development_records(student_id, measurement_date);
 
 -- Chat system indexes
@@ -468,7 +469,6 @@ COMMENT ON TABLE parents IS 'Parent contact information linked to students';
 COMMENT ON TABLE classes IS 'Kindergarten classes with assigned teachers';
 COMMENT ON TABLE posts IS 'Enhanced posts supporting both Class Activities and School Announcements with photo support, scheduling, categorization, and pinning';
 COMMENT ON TABLE comments IS 'Parent comments on teacher posts with moderation support';
-COMMENT ON TABLE messages IS 'Simple messaging between teachers and parents';
 COMMENT ON TABLE attendance IS 'Daily attendance tracking';
 
 -- Column comments for the enhanced posts table

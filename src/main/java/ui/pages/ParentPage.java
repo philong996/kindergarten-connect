@@ -9,10 +9,12 @@ import ui.panels.PhysicalDevelopmentPanel;
 import ui.panels.ChildProfilePanel;
 import ui.panels.PostsPanel;
 import ui.panels.ChatPanel;
+import ui.panels.AttendanceHistoryPanel;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +28,7 @@ public class ParentPage extends BaseAuthenticatedPage {
     private JPanel mainPanel;
     private ParentService parentService;
     private JPanel childDevPanel;
+    private JPanel attendanceHistoryPanel;
     private JComboBox<String> childCombo;
     private List<Student> children;
     private ChildProfilePanel childProfilePanel;
@@ -66,6 +69,9 @@ public class ParentPage extends BaseAuthenticatedPage {
         // Child Development tab
         childDevPanel = createChildDevelopmentTab();
         
+        // Attendance History tab
+        attendanceHistoryPanel = createAttendanceHistoryTab();
+        
         // Create child profile panel
         childProfilePanel = new ChildProfilePanel(parentService, parentUserId);
         
@@ -83,6 +89,7 @@ public class ParentPage extends BaseAuthenticatedPage {
         
         // Add tabs with Child Profile first (default selected)
         tabbedPane.addTab("Child Profile", detailPanel);
+        tabbedPane.addTab("Attendance History", attendanceHistoryPanel);
         tabbedPane.addTab("Class Posts", createPostsTab());
         tabbedPane.addTab("Messages", createMessagesTab());
         tabbedPane.addTab("Child Development", childDevPanel);
@@ -215,6 +222,9 @@ public class ParentPage extends BaseAuthenticatedPage {
         
         // Update the development tab
         updateChildDevelopmentPanel(selectedChild);
+        
+        // Update the attendance history tab
+        updateAttendanceHistoryPanel(selectedChild);
     }
     
     private void updateChildProfileDetails(Student child) {
@@ -262,6 +272,36 @@ public class ParentPage extends BaseAuthenticatedPage {
         }
     }
 
+    private void updateAttendanceHistoryPanel(Student selectedChild) {
+        if (attendanceHistoryPanel != null) {
+            // Remove existing content
+            attendanceHistoryPanel.removeAll();
+            
+            // Create new AttendanceHistoryPanel for the selected child's class
+            AttendanceHistoryPanel historyPanel = new AttendanceHistoryPanel(selectedChild.getClassId());
+            
+            // Set default date range to last month
+            LocalDate endDate = LocalDate.now();
+            LocalDate startDate = endDate.minusMonths(1);
+            historyPanel.setDateRange(startDate, endDate);
+            
+            // Pre-select the child and perform search
+            historyPanel.setSelectedStudent(selectedChild.getId());
+            historyPanel.performSearch();
+            
+            // Add header info about selected child
+            JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            headerPanel.add(new JLabel("Attendance history for: " + selectedChild.getName() + 
+                                     " (" + (selectedChild.getClassName() != null ? selectedChild.getClassName() : "Class ID: " + selectedChild.getClassId()) + ")"));
+            
+            attendanceHistoryPanel.add(headerPanel, BorderLayout.NORTH);
+            attendanceHistoryPanel.add(historyPanel, BorderLayout.CENTER);
+            
+            attendanceHistoryPanel.revalidate();
+            attendanceHistoryPanel.repaint();
+        }
+    }
+
     private JPanel createChildDevelopmentTab() {
         JPanel panel = new JPanel(new BorderLayout());
         
@@ -274,6 +314,21 @@ public class ParentPage extends BaseAuthenticatedPage {
         
         // This panel will be populated when a child is selected
         // Return the panel that will be updated by updateChildDevelopmentPanel
+        return panel;
+    }
+    
+    private JPanel createAttendanceHistoryTab() {
+        JPanel panel = new JPanel(new BorderLayout());
+        
+        if (children.isEmpty()) {
+            JLabel noChildrenLabel = new JLabel("No children found for your account.", SwingConstants.CENTER);
+            noChildrenLabel.setFont(new Font("Arial", Font.ITALIC, 16));
+            panel.add(noChildrenLabel, BorderLayout.CENTER);
+            return panel;
+        }
+        
+        // This panel will be populated when a child is selected
+        // Return the panel that will be updated by updateAttendanceHistoryPanel
         return panel;
     }
     
