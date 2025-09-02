@@ -128,6 +128,20 @@ public class UserService {
     }
     
     /**
+     * Get all users with school names for UI display
+     */
+    public List<User> getAllUsersWithSchoolNames() {
+        return userDAO.findAllWithSchoolNames();
+    }
+    
+    /**
+     * Get all schools for dropdown options
+     */
+    public List<Object[]> getAllSchools() {
+        return userDAO.findAllSchools();
+    }
+    
+    /**
      * Get users by role
      */
     public List<User> getUsersByRole(String role) {

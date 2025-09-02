@@ -11,6 +11,7 @@ public class User {
     private String password;
     private String role; // PRINCIPAL, TEACHER, PARENT
     private int schoolId;
+    private String schoolName; // For UI display - not stored in database
     private LocalDateTime createdAt;
     
     // Constructors
@@ -47,6 +48,9 @@ public class User {
     
     public int getSchoolId() { return schoolId; }
     public void setSchoolId(int schoolId) { this.schoolId = schoolId; }
+    
+    public String getSchoolName() { return schoolName; }
+    public void setSchoolName(String schoolName) { this.schoolName = schoolName; }
     
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

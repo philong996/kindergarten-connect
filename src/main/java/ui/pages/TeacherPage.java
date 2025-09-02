@@ -92,7 +92,7 @@ public class TeacherPage extends BaseAuthenticatedPage {
         int currentUserId = authService.getCurrentUser().getId();
         String currentUserRole = authService.getCurrentUser().getRole();
         
-        PostsPanel postsPanel = new PostsPanel(currentUserId, currentUserRole);
+        PostsPanel postsPanel = new PostsPanel(currentUserId, currentUserRole, authService);
         
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(postsPanel, BorderLayout.CENTER);
@@ -148,6 +148,7 @@ public class TeacherPage extends BaseAuthenticatedPage {
                 if (selectedRow >= 0) {
                     int studentId = (Integer) tableModel.getValueAt(selectedRow, 0);
                     String studentName = (String) tableModel.getValueAt(selectedRow, 1);
+                    System.out.println("Student selected: ID=" + studentId + ", Name=" + studentName);
                     showStudentDetails(studentId, studentName);
                 }
             }
@@ -197,6 +198,7 @@ public class TeacherPage extends BaseAuthenticatedPage {
     }
     
     private void showStudentDetails(int studentId, String studentName) {
+        // System.out.println("showStudentDetails called for: ID=" + studentId + ", Name=" + studentName);
         try {
             StudentService studentService = new StudentService();
             Student student = studentService.getStudentById(studentId);
@@ -222,6 +224,7 @@ public class TeacherPage extends BaseAuthenticatedPage {
             PhysicalDevelopmentPanel physicalDevPanel = new PhysicalDevelopmentPanel(
                 studentId, studentName, authService.getCurrentUser().getId(), true
             );
+            // System.out.println("Physical development panel created for student: " + studentName);
             physicalPanel.add(physicalDevPanel, BorderLayout.CENTER);
             
             detailsPanel.add(physicalPanel, BorderLayout.CENTER);
@@ -231,7 +234,11 @@ public class TeacherPage extends BaseAuthenticatedPage {
             for (Component comp : components) {
                 if (comp instanceof JTabbedPane) {
                     JTabbedPane tabbedPane = (JTabbedPane) comp;
-                    Component tabComponent = tabbedPane.getComponentAt(2); // Physical Development tab (index 2)
+                    
+                    // Switch to Physical Development tab
+                    tabbedPane.setSelectedIndex(3);
+                    
+                    Component tabComponent = tabbedPane.getComponentAt(3); // Physical Development tab (index 3)
                     if (tabComponent instanceof JPanel) {
                         JPanel tabPanel = (JPanel) tabComponent;
                         Component[] tabComponents = tabPanel.getComponents();
@@ -240,6 +247,9 @@ public class TeacherPage extends BaseAuthenticatedPage {
                             splitPane.setRightComponent(detailsPanel);
                             splitPane.revalidate();
                             splitPane.repaint();
+                            // System.out.println("UI updated with student details panel");
+                        } else {
+                            System.out.println("Could not find split pane in tab components");
                         }
                     }
                 }

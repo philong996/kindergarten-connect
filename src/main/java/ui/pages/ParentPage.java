@@ -280,7 +280,7 @@ public class ParentPage extends BaseAuthenticatedPage {
         int currentUserId = authService.getCurrentUser().getId();
         String currentUserRole = authService.getCurrentUser().getRole();
         
-        PostsPanel postsPanel = new PostsPanel(currentUserId, currentUserRole);
+        PostsPanel postsPanel = new PostsPanel(currentUserId, currentUserRole, authService);
         
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(postsPanel, BorderLayout.CENTER);

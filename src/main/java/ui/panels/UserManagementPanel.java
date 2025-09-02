@@ -37,13 +37,21 @@ public class UserManagementPanel extends JPanel {
         setupPermissions();
         loadUsers();
     }
+    
+    /**
+     * Public method to refresh all data - useful when panel becomes visible
+     */
+    public void refreshData() {
+        loadUsers();
+        loadAvailableSchools();
+    }
 
     private void initializeComponents() {
         // Create search panel
         searchPanel = SearchPanel.createWithClear("Search users:", this::searchUsers, this::loadUsers);
         
         // Create data table
-        String[] columnNames = {"ID", "Username", "Role", "School ID", "Created At"};
+        String[] columnNames = {"ID", "Username", "Role", "School", "Created At"};
         userTable = new DataTable(columnNames);
         userTable.setRowSelectionHandler(this::onRowSelected);
 
@@ -52,10 +60,10 @@ public class UserManagementPanel extends JPanel {
         formBuilder.addTextField(FIELD_USERNAME, "Username", true)
                   .addPasswordField(FIELD_PASSWORD, "Password", true)
                   .addComboBox(FIELD_ROLE, "Role", new String[]{"TEACHER", "PARENT"}, true)
-                  .addNumberField(FIELD_SCHOOL_ID, "School ID", true);
+                  .addComboBox(FIELD_SCHOOL_ID, "School", new String[]{"Loading..."}, true);
         
-        // Set default school ID
-        formBuilder.setValue(FIELD_SCHOOL_ID, "1");
+        // Load available schools
+        loadAvailableSchools();
 
         // Create button panel
         buttonPanel = ButtonPanel.createCrudPanel(
@@ -112,7 +120,7 @@ public class UserManagementPanel extends JPanel {
 
     private void loadUsers() {
         try {
-            List<User> users = userService.getAllUsers();
+            List<User> users = userService.getAllUsersWithSchoolNames();
             updateTable(users);
             searchPanel.clearSearchText();
         } catch (Exception e) {
@@ -128,7 +136,7 @@ public class UserManagementPanel extends JPanel {
                 user.getId(),
                 user.getUsername(),
                 user.getRole(),
-                user.getSchoolId(),
+                user.getSchoolName() != null ? user.getSchoolName() : "Unknown School",
                 user.getCreatedAt() != null ? user.getCreatedAt().toString() : ""
             };
             userTable.addRow(rowData);
@@ -143,7 +151,26 @@ public class UserManagementPanel extends JPanel {
             formBuilder.setValue(FIELD_USERNAME, selectedUser.getUsername());
             formBuilder.setValue(FIELD_PASSWORD, ""); // Don't show existing password
             formBuilder.setValue(FIELD_ROLE, selectedUser.getRole());
-            formBuilder.setValue(FIELD_SCHOOL_ID, String.valueOf(selectedUser.getSchoolId()));
+            
+            // Set school by finding the matching school name
+            try {
+                List<Object[]> schools = userService.getAllSchools();
+                String targetSchoolName = null;
+                
+                // Find the school name for the user's school ID
+                for (Object[] school : schools) {
+                    if (((Integer) school[0]).equals(selectedUser.getSchoolId())) {
+                        targetSchoolName = (String) school[1];
+                        break;
+                    }
+                }
+                
+                if (targetSchoolName != null) {
+                    formBuilder.setValue(FIELD_SCHOOL_ID, targetSchoolName);
+                }
+            } catch (Exception e) {
+                System.err.println("Error setting school in form: " + e.getMessage());
+            }
         }
     }
 
@@ -225,28 +252,72 @@ public class UserManagementPanel extends JPanel {
 
     private void clearForm() {
         formBuilder.clearAll();
-        formBuilder.setValue(FIELD_SCHOOL_ID, "1"); // Reset to default
+        // Reset to first school in the list
+        FormField schoolField = formBuilder.getField(FIELD_SCHOOL_ID);
+        if (schoolField != null && schoolField.getInputComponent() instanceof JComboBox) {
+            @SuppressWarnings("unchecked")
+            JComboBox<String> comboBox = (JComboBox<String>) schoolField.getInputComponent();
+            if (comboBox.getItemCount() > 0) {
+                comboBox.setSelectedIndex(0);
+            }
+        }
         selectedUser = null;
         userTable.clearSelection();
         buttonPanel.setButtonEnabled("Update", false);
         buttonPanel.setButtonEnabled("Delete", false);
     }
     
+    private void loadAvailableSchools() {
+        try {
+            List<Object[]> schools = userService.getAllSchools();
+            
+            // Create school options
+            String[] schoolOptions = new String[schools.size()];
+            for (int i = 0; i < schools.size(); i++) {
+                schoolOptions[i] = (String) schools.get(i)[1]; // School name
+            }
+            
+            // Update the school combo box
+            FormField schoolField = formBuilder.getField(FIELD_SCHOOL_ID);
+            if (schoolField != null && schoolField.getInputComponent() instanceof JComboBox) {
+                @SuppressWarnings("unchecked")
+                JComboBox<String> comboBox = (JComboBox<String>) schoolField.getInputComponent();
+                comboBox.removeAllItems();
+                for (String option : schoolOptions) {
+                    comboBox.addItem(option);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading schools: " + e.getMessage());
+        }
+    }
+    
     private User createUserFromForm() throws Exception {
         String username = formBuilder.getValue(FIELD_USERNAME).trim();
         String password = formBuilder.getValue(FIELD_PASSWORD).trim();
         String role = formBuilder.getValue(FIELD_ROLE).trim();
-        String schoolIdStr = formBuilder.getValue(FIELD_SCHOOL_ID).trim();
+        String schoolName = formBuilder.getValue(FIELD_SCHOOL_ID).trim();
         
-        if (username.isEmpty() || password.isEmpty() || role.isEmpty() || schoolIdStr.isEmpty()) {
+        if (username.isEmpty() || password.isEmpty() || role.isEmpty() || schoolName.isEmpty()) {
             throw new Exception("All fields are required.");
         }
         
-        int schoolId;
+        // Find school ID by name
+        int schoolId = -1;
         try {
-            schoolId = Integer.parseInt(schoolIdStr);
-        } catch (NumberFormatException e) {
-            throw new Exception("School ID must be a number.");
+            List<Object[]> schools = userService.getAllSchools();
+            for (Object[] school : schools) {
+                if (schoolName.equals(school[1])) {
+                    schoolId = (Integer) school[0];
+                    break;
+                }
+            }
+            
+            if (schoolId == -1) {
+                throw new Exception("Selected school not found.");
+            }
+        } catch (Exception e) {
+            throw new Exception("Error finding school: " + e.getMessage());
         }
         
         User user = new User();

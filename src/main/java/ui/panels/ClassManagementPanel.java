@@ -41,6 +41,15 @@ public class ClassManagementPanel extends JPanel {
         loadClassData();
     }
     
+    /**
+     * Public method to refresh all data - useful when panel becomes visible
+     * and data might have changed in other parts of the application
+     */
+    public void refreshData() {
+        loadClassData();
+        loadAvailableTeachers();
+    }
+    
     private void initializeComponents() {
         // Create search panel
         searchPanel = SearchPanel.createWithClear("Search classes:", this::searchClasses, this::loadClassData);
@@ -72,6 +81,7 @@ public class ClassManagementPanel extends JPanel {
         buttonPanel.addButton("Assign Teacher", e -> assignTeacher());
         buttonPanel.addButton("Remove Teacher", e -> removeTeacher());
         buttonPanel.addButton("View Students", e -> viewStudents());
+        buttonPanel.addButton("Refresh", e -> refreshData());
         
         // Create statistics panel
         statisticsPanel = createStatisticsPanel();
@@ -163,6 +173,8 @@ public class ClassManagementPanel extends JPanel {
             updateTable(classes);
             updateStatistics();
             searchPanel.clearSearchText();
+            // Refresh teacher list as class assignments may have changed
+            loadAvailableTeachers();
         } catch (Exception e) {
             DialogFactory.showError(this, "Error loading class data: " + e.getMessage());
         }
@@ -197,7 +209,30 @@ public class ClassManagementPanel extends JPanel {
             
             // Update teacher combo box selection
             if (selectedClass.getTeacherName() != null) {
-                formBuilder.setValue(FIELD_TEACHER, selectedClass.getTeacherName());
+                // Find the teacher in the combo box (with or without "(Assigned)" suffix)
+                FormField teacherField = formBuilder.getField(FIELD_TEACHER);
+                if (teacherField != null && teacherField.getInputComponent() instanceof JComboBox) {
+                    @SuppressWarnings("unchecked")
+                    JComboBox<String> comboBox = (JComboBox<String>) teacherField.getInputComponent();
+                    
+                    // Look for the teacher name with or without "(Assigned)" suffix
+                    String teacherName = selectedClass.getTeacherName();
+                    boolean found = false;
+                    
+                    for (int i = 0; i < comboBox.getItemCount(); i++) {
+                        String item = comboBox.getItemAt(i);
+                        if (item.equals(teacherName) || item.equals(teacherName + " (Assigned)")) {
+                            comboBox.setSelectedIndex(i);
+                            found = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!found) {
+                        // Fallback to setting the value directly
+                        formBuilder.setValue(FIELD_TEACHER, teacherName);
+                    }
+                }
             } else {
                 formBuilder.setValue(FIELD_TEACHER, "None");
             }
@@ -435,9 +470,17 @@ public class ClassManagementPanel extends JPanel {
         
         // Handle teacher assignment
         if (!"None".equals(teacherName)) {
+            // Remove "(Assigned)" suffix if present
+            String cleanTeacherName = teacherName.split(" \\(")[0].trim();
+            
+            // Check if this teacher is already assigned to another class (if adding new class)
+            if (selectedClass == null && teacherName.contains("(Assigned)")) {
+                throw new Exception("Selected teacher is already assigned to another class. Please choose an available teacher.");
+            }
+            
             List<Object[]> allTeachers = classService.getAllTeachers();
             Integer teacherId = allTeachers.stream()
-                    .filter(teacher -> teacherName.equals(teacher[1]))
+                    .filter(teacher -> cleanTeacherName.equals(teacher[1]))
                     .map(teacher -> (Integer) teacher[0])
                     .findFirst()
                     .orElse(null);
@@ -449,13 +492,27 @@ public class ClassManagementPanel extends JPanel {
     
     private void loadAvailableTeachers() {
         try {
+            // Get all teachers for showing current assignments, but mark availability
             List<Object[]> allTeachers = classService.getAllTeachers();
+            List<Object[]> availableTeachers = classService.getAvailableTeachers();
             
-            // Create teacher options (None + all teachers for flexibility)
+            // Create teacher options with availability status
             String[] teacherOptions = new String[allTeachers.size() + 1];
             teacherOptions[0] = "None";
+            
             for (int i = 0; i < allTeachers.size(); i++) {
-                teacherOptions[i + 1] = (String) allTeachers.get(i)[1];
+                String teacherName = (String) allTeachers.get(i)[1];
+                Integer teacherId = (Integer) allTeachers.get(i)[0];
+                
+                // Check if teacher is available
+                boolean isAvailable = availableTeachers.stream()
+                    .anyMatch(teacher -> teacherId.equals(teacher[0]));
+                
+                if (isAvailable) {
+                    teacherOptions[i + 1] = teacherName;
+                } else {
+                    teacherOptions[i + 1] = teacherName + " (Assigned)";
+                }
             }
             
             // Update the teacher combo box by accessing the input component directly
@@ -463,9 +520,24 @@ public class ClassManagementPanel extends JPanel {
             if (teacherField != null && teacherField.getInputComponent() instanceof JComboBox) {
                 @SuppressWarnings("unchecked")
                 JComboBox<String> comboBox = (JComboBox<String>) teacherField.getInputComponent();
+                
+                // Remember current selection
+                String currentSelection = (String) comboBox.getSelectedItem();
+                
                 comboBox.removeAllItems();
                 for (String option : teacherOptions) {
                     comboBox.addItem(option);
+                }
+                
+                // Restore selection if it still exists
+                if (currentSelection != null) {
+                    for (int i = 0; i < comboBox.getItemCount(); i++) {
+                        String item = comboBox.getItemAt(i);
+                        if (item.startsWith(currentSelection.split(" \\(")[0])) {
+                            comboBox.setSelectedIndex(i);
+                            break;
+                        }
+                    }
                 }
             }
         } catch (Exception e) {

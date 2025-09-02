@@ -191,6 +191,57 @@ public class UserDAO {
     }
     
     /**
+     * Get all users with school names for UI display
+     */
+    public List<User> findAllWithSchoolNames() {
+        List<User> users = new ArrayList<>();
+        String sql = """
+            SELECT u.*, s.name as school_name 
+            FROM users u 
+            LEFT JOIN schools s ON u.school_id = s.id 
+            ORDER BY u.role, u.username
+            """;
+        
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                User user = mapResultSetToUser(rs);
+                // Set school name if available
+                String schoolName = rs.getString("school_name");
+                if (schoolName != null) {
+                    user.setSchoolName(schoolName);
+                }
+                users.add(user);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error finding all users with school names: " + e.getMessage());
+        }
+        return users;
+    }
+    
+    /**
+     * Get all schools for dropdown options
+     */
+    public List<Object[]> findAllSchools() {
+        List<Object[]> schools = new ArrayList<>();
+        String sql = "SELECT id, name FROM schools ORDER BY name";
+        
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                schools.add(new Object[]{rs.getInt("id"), rs.getString("name")});
+            }
+        } catch (SQLException e) {
+            System.err.println("Error finding all schools: " + e.getMessage());
+        }
+        return schools;
+    }
+    
+    /**
      * Helper method to map ResultSet to User object
      */
     private User mapResultSetToUser(ResultSet rs) throws SQLException {

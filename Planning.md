@@ -106,12 +106,12 @@
 
 ### **Feature 4: Class Posts Management Panel**
 **Deliverable:** Create and manage posts for parents with photo uploads, scheduling, and comment moderation  
-- [ ] Implement `PostsPanel.java` for class posts management UI
-- [ ] Add business logic for post creation, scheduling, and visibility rules in `PostService.java`
-- [ ] Create `PostDAO.java` for database operations related to posts, comments, and photo attachments
-- [ ] Create `Post.java` as the data model for posts with scheduling and target audience
-- [ ] Create a `comments` table to store parent comments on posts.
-- [ ] Create `Comment.java` as the data model for parent comments on posts
+- [x] Implement `PostsPanel.java` for class posts management UI
+- [x] Add business logic for post creation, scheduling, and visibility rules in `PostService.java`
+- [x] Create `PostDAO.java` for database operations related to posts, comments, and photo attachments
+- [x] Create `Post.java` as the data model for posts with scheduling and target audience
+- [x] Create a `comments` table to store parent comments on posts.
+- [x] Create `Comment.java` as the data model for parent comments on posts
 
 ---
 

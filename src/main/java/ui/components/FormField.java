@@ -112,6 +112,13 @@ public class FormField extends JPanel {
         } else if (inputComponent instanceof JComboBox) {
             Object selected = ((JComboBox<?>) inputComponent).getSelectedItem();
             return selected != null ? selected.toString() : "";
+        } else if (inputComponent instanceof JScrollPane) {
+            // Handle JTextArea wrapped in JScrollPane
+            JScrollPane scrollPane = (JScrollPane) inputComponent;
+            JComponent viewport = (JComponent) scrollPane.getViewport().getView();
+            if (viewport instanceof JTextArea) {
+                return ((JTextArea) viewport).getText();
+            }
         }
         return "";
     }
@@ -126,6 +133,13 @@ public class FormField extends JPanel {
             @SuppressWarnings("unchecked")
             JComboBox<Object> comboBox = (JComboBox<Object>) inputComponent;
             comboBox.setSelectedItem(text);
+        } else if (inputComponent instanceof JScrollPane) {
+            // Handle JTextArea wrapped in JScrollPane
+            JScrollPane scrollPane = (JScrollPane) inputComponent;
+            JComponent viewport = (JComponent) scrollPane.getViewport().getView();
+            if (viewport instanceof JTextArea) {
+                ((JTextArea) viewport).setText(text);
+            }
         }
     }
     
