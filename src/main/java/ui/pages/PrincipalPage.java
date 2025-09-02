@@ -92,6 +92,22 @@ public class PrincipalPage extends BaseAuthenticatedPage {
         JPanel settingsPanel = new JPanel();
         settingsPanel.add(new JLabel("Settings - Coming Soon"));
         tabbedPane.addTab("Settings", settingsPanel);
+        
+        // Add change listener to refresh data when tabs are switched
+        tabbedPane.addChangeListener(e -> {
+            int selectedIndex = tabbedPane.getSelectedIndex();
+            String selectedTitle = tabbedPane.getTitleAt(selectedIndex);
+            
+            // Refresh Class Management panel when it's selected
+            // This ensures the teacher dropdown shows newly created teachers
+            if ("Class Management".equals(selectedTitle)) {
+                classPanel.refreshData();
+            }
+            // Refresh User Management panel when it's selected
+            else if ("User Management".equals(selectedTitle)) {
+                userPanel.refreshData();
+            }
+        });
     }
 
     private JPanel createStatusPanel() {

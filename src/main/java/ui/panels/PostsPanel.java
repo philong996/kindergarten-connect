@@ -9,21 +9,17 @@ import service.PostService;
 import ui.components.*;
 import util.AuthUtil;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
- * Posts Panel for managing class posts with photo uploads, scheduling, and comment moderation
+ * Enhanced Posts Panel with card-based layout for Class Activities and School Announcements
+ * Features: Card-based post display, inline comments, no comment moderation
  */
 public class PostsPanel extends JPanel {
     private final PostService postService;
@@ -34,410 +30,493 @@ public class PostsPanel extends JPanel {
     private final String currentUserRole;
     
     // UI Components
-    private SearchPanel searchPanel;
-    private DataTable postsTable;
-    private FormBuilder postFormBuilder;
-    private ButtonPanel postButtonPanel;
-    private DataTable commentsTable;
-    private FormBuilder commentFormBuilder;
-    private ButtonPanel commentButtonPanel;
     private JTabbedPane mainTabbedPane;
+    private JPanel classActivitiesContainer;
+    private JPanel schoolAnnouncementsContainer;
+    private JScrollPane classActivitiesScrollPane;
+    private JScrollPane announcementsScrollPane;
+    private String currentPostFilter = Post.TYPE_CLASS_ACTIVITY;
     
     // Form field IDs
     private static final String FIELD_TITLE = "title";
     private static final String FIELD_CONTENT = "content";
     private static final String FIELD_CLASS = "class";
+    private static final String FIELD_CATEGORY = "category";
     private static final String FIELD_VISIBILITY = "visibility";
     private static final String FIELD_SCHEDULED_DATE = "scheduled_date";
-    private static final String FIELD_PHOTO = "photo";
-    private static final String FIELD_COMMENT = "comment";
+    private static final String FIELD_EVENT_DATE = "event_date";
     
     // Selected items
-    private Post selectedPost;
-    private Comment selectedComment;
-    private byte[] selectedPhotoData;
-    private String selectedPhotoFilename;
     
-    public PostsPanel(int currentUserId, String currentUserRole) {
+    public PostsPanel(int currentUserId, String currentUserRole, AuthService authService) {
         this.currentUserId = currentUserId;
         this.currentUserRole = currentUserRole;
-        this.authService = new AuthService();
+        this.authService = authService;
         this.authorizationService = this.authService.getAuthorizationService();
         this.postService = new PostService();
         this.classDAO = new ClassDAO();
         
+        // Debug: Print user information
+        System.out.println("=== PostsPanel Constructor ===");
+        System.out.println("User ID: " + currentUserId);
+        System.out.println("User Role: " + currentUserRole);
+        System.out.println("Auth Service: " + (authService != null ? "Available" : "NULL"));
+        
         initializeComponents();
         setupLayout();
         setupEventHandlers();
-        loadPosts();
-        loadComments();
+        loadClassActivities();
+        
+        System.out.println("=== PostsPanel Initialization Complete ===");
     }
     
     private void initializeComponents() {
-        // Create tabbed pane
         mainTabbedPane = new JTabbedPane();
         
-        // Posts tab
-        initializePostsTab();
+        // Initialize containers for card layout
+        classActivitiesContainer = new JPanel();
+        classActivitiesContainer.setLayout(new BoxLayout(classActivitiesContainer, BoxLayout.Y_AXIS));
+        classActivitiesContainer.setBackground(Color.WHITE);
         
-        // Comments tab (only for teachers)
-        if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
-            initializeCommentsTab();
-        }
-    }
-    
-    private void initializePostsTab() {
-        // Search panel
-        searchPanel = SearchPanel.createWithClear("Search posts:", searchTerm -> searchPosts(searchTerm), this::loadPosts);
+        schoolAnnouncementsContainer = new JPanel();
+        schoolAnnouncementsContainer.setLayout(new BoxLayout(schoolAnnouncementsContainer, BoxLayout.Y_AXIS));
+        schoolAnnouncementsContainer.setBackground(Color.WHITE);
         
-        // Posts table
-        String[] postColumns = {"ID", "Title", "Class", "Visibility", "Scheduled", "Comments", "Created"};
-        postsTable = new DataTable(postColumns);
-        postsTable.setRowSelectionHandler(this::onPostSelected);
+        // Create scroll panes
+        classActivitiesScrollPane = new JScrollPane(classActivitiesContainer);
+        classActivitiesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        classActivitiesScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        classActivitiesScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         
-        // Post form
-        postFormBuilder = new FormBuilder("Post Information", 2);
-        postFormBuilder.addTextField(FIELD_TITLE, "Title", true)
-                      .addTextArea(FIELD_CONTENT, "Content", 4, true);
-        
-        // Only teachers can create posts
-        if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
-            postFormBuilder.addComboBox(FIELD_CLASS, "Class", new String[]{"Loading..."}, false)
-                          .addComboBox(FIELD_VISIBILITY, "Visibility", 
-                                     new String[]{"ALL", "PARENTS_ONLY", "TEACHERS_ONLY"}, true)
-                          .addDateField(FIELD_SCHEDULED_DATE, "Scheduled Date (optional)", false);
-            
-            // Photo upload button
-            JButton photoButton = new JButton("Select Photo");
-            photoButton.addActionListener(e -> selectPhoto());
-            postFormBuilder.getField(FIELD_TITLE).add(photoButton);
-            
-            loadAvailableClasses();
-            
-            // Post management buttons
-            postButtonPanel = ButtonPanel.createCrudPanel(
-                e -> createPost(),
-                e -> updatePost(),
-                e -> deletePost(),
-                e -> clearPostForm()
-            );
-        } else {
-            // Parents can only view posts and add comments
-            ButtonPanel parentButtonPanel = new ButtonPanel();
-            parentButtonPanel.addButton("View Comments", e -> viewPostComments());
-            postButtonPanel = parentButtonPanel;
-        }
-    }
-    
-    private void initializeCommentsTab() {
-        // Comments table for moderation
-        String[] commentColumns = {"ID", "Post", "Author", "Content", "Status", "Created"};
-        commentsTable = new DataTable(commentColumns);
-        commentsTable.setRowSelectionHandler(this::onCommentSelected);
-        
-        // Comment form for parent comment input
-        commentFormBuilder = new FormBuilder("Add Comment", 1);
-        commentFormBuilder.addTextArea(FIELD_COMMENT, "Your Comment", 3, true);
-        
-        // Comment management buttons
-        if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
-            ButtonPanel teacherCommentPanel = new ButtonPanel();
-            teacherCommentPanel.addStyledButton("Approve", e -> approveComment(), ButtonPanel.ButtonStyle.SUCCESS);
-            teacherCommentPanel.addStyledButton("Reject", e -> rejectComment(), ButtonPanel.ButtonStyle.SECONDARY);
-            teacherCommentPanel.addStyledButton("Delete", e -> deleteComment(), ButtonPanel.ButtonStyle.DANGER);
-            teacherCommentPanel.addButton("Refresh", e -> loadComments());
-            commentButtonPanel = teacherCommentPanel;
-        } else {
-            ButtonPanel parentCommentPanel = new ButtonPanel();
-            parentCommentPanel.addButton("Add Comment", e -> addComment());
-            commentButtonPanel = parentCommentPanel;
-        }
+        announcementsScrollPane = new JScrollPane(schoolAnnouncementsContainer);
+        announcementsScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        announcementsScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        announcementsScrollPane.getVerticalScrollBar().setUnitIncrement(16);
     }
     
     private void setupLayout() {
         setLayout(new BorderLayout());
         
-        // Posts tab panel
-        JPanel postsTabPanel = new JPanel(new BorderLayout());
-        postsTabPanel.add(searchPanel, BorderLayout.NORTH);
-        postsTabPanel.add(postsTable, BorderLayout.CENTER);
+        // Create tabs
+        JPanel classActivitiesTab = createPostTab(classActivitiesScrollPane, "Class Activities");
+        JPanel announcementsTab = createPostTab(announcementsScrollPane, "School Announcements");
         
-        JPanel postsBottomPanel = new JPanel(new BorderLayout());
-        postsBottomPanel.add(postFormBuilder.build(), BorderLayout.CENTER);
-        postsBottomPanel.add(postButtonPanel, BorderLayout.SOUTH);
-        postsTabPanel.add(postsBottomPanel, BorderLayout.SOUTH);
+        mainTabbedPane.addTab("📚 Class Activities", classActivitiesTab);
         
-        mainTabbedPane.addTab("Posts", postsTabPanel);
-        
-        // Comments tab panel (if available)
-        if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
-            JPanel commentsTabPanel = new JPanel(new BorderLayout());
-            commentsTabPanel.add(commentsTable, BorderLayout.CENTER);
-            
-            JPanel commentsBottomPanel = new JPanel(new BorderLayout());
-            commentsBottomPanel.add(commentFormBuilder.build(), BorderLayout.CENTER);
-            commentsBottomPanel.add(commentButtonPanel, BorderLayout.SOUTH);
-            commentsTabPanel.add(commentsBottomPanel, BorderLayout.SOUTH);
-            
-            mainTabbedPane.addTab("Comment Moderation", commentsTabPanel);
+        // Only show announcements tab for principals or if there are announcements to view
+        if ("PRINCIPAL".equals(currentUserRole) || canViewAnnouncements()) {
+            mainTabbedPane.addTab("📢 School Announcements", announcementsTab);
         }
         
         add(mainTabbedPane, BorderLayout.CENTER);
     }
     
+    private JPanel createPostTab(JScrollPane scrollPane, String title) {
+        System.out.println("Creating tab: " + title + " for user role: " + currentUserRole);
+        
+        JPanel tabPanel = new JPanel(new BorderLayout());
+        
+        // Header with title and controls
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        headerPanel.add(new JLabel("<html><h2>" + title + "</h2></html>"));
+        
+        if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
+            JButton createPostButton = new JButton("➕ Create New Post");
+            createPostButton.addActionListener(e -> showCreatePostDialog(title));
+            headerPanel.add(createPostButton);
+            
+            JButton refreshButton = new JButton("🔄 Refresh");
+            refreshButton.addActionListener(e -> refreshCurrentView());
+            headerPanel.add(refreshButton);
+        }
+        
+        tabPanel.add(headerPanel, BorderLayout.NORTH);
+        tabPanel.add(scrollPane, BorderLayout.CENTER);
+        
+        return tabPanel;
+    }
+    
     private void setupEventHandlers() {
-        // Tab change handler to load appropriate data
         mainTabbedPane.addChangeListener(e -> {
             int selectedTab = mainTabbedPane.getSelectedIndex();
             if (selectedTab == 0) {
-                loadPosts();
+                currentPostFilter = Post.TYPE_CLASS_ACTIVITY;
+                loadClassActivities();
             } else if (selectedTab == 1) {
-                loadComments();
+                currentPostFilter = Post.TYPE_SCHOOL_ANNOUNCEMENT;
+                loadSchoolAnnouncements();
             }
         });
     }
     
-    private void loadData() {
-        loadPosts();
+    private void loadClassActivities() {
+        try {
+            List<Post> posts = getPostsByType(Post.TYPE_CLASS_ACTIVITY);
+            displayPostsAsCards(posts, classActivitiesContainer);
+        } catch (Exception e) {
+            DialogFactory.showError(this, "Error loading class activities: " + e.getMessage());
+        }
     }
     
-    private void loadPosts() {
+    private void loadSchoolAnnouncements() {
         try {
-            List<Post> posts;
-            
+            List<Post> posts = getPostsByType(Post.TYPE_SCHOOL_ANNOUNCEMENT);
+            System.out.println("=== Loading School Announcements ===");
+            System.out.println("Found " + posts.size() + " school announcement posts");
+            for (Post post : posts) {
+                System.out.println("- Post: " + post.getTitle() + " (Author: " + post.getAuthorId() + ", Type: " + post.getPostType() + ")");
+            }
+            displayPostsAsCards(posts, schoolAnnouncementsContainer);
+        } catch (Exception e) {
+            System.err.println("Error loading school announcements: " + e.getMessage());
+            e.printStackTrace();
+            DialogFactory.showError(this, "Error loading announcements: " + e.getMessage());
+        }
+    }
+    
+    private List<Post> getPostsByType(String postType) {
+        List<Post> allPosts;
+        
+        System.out.println("=== Getting Posts by Type: " + postType + " ===");
+        System.out.println("Current User ID: " + currentUserId + ", Role: " + currentUserRole);
+        
+        if (Post.TYPE_SCHOOL_ANNOUNCEMENT.equals(postType)) {
+            // For school announcements, get all posts and filter by type
+            // School announcements can be created by both teachers and principals and should be visible to all
             if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
-                // Teachers see all their posts
-                posts = postService.getPostsByTeacher(currentUserId);
+                // Get posts by current user first
+                allPosts = postService.getPostsByTeacher(currentUserId);
+                System.out.println("Posts by current user (" + currentUserId + "): " + allPosts.size());
+                
+                // Also get posts from other teachers and principals for school announcements
+                // This ensures teachers can see announcements created by other teachers/principals
+                List<Post> otherPosts = new java.util.ArrayList<>();
+                
+                // Get principal's posts (user ID 1) if current user is not principal
+                if (currentUserId != 1) {
+                    List<Post> principalPosts = postService.getPostsByTeacher(1);
+                    System.out.println("Posts by principal (1): " + principalPosts.size());
+                    otherPosts.addAll(principalPosts);
+                }
+                
+                // For a more complete solution, we could query all users with TEACHER/PRINCIPAL role
+                // but for now, this covers the main use case
+                allPosts.addAll(otherPosts);
+                System.out.println("Total posts before filtering: " + allPosts.size());
             } else {
                 // Parents see posts for their children's classes
                 int[] classIds = authorizationService.getAccessibleClassIds();
-                posts = java.util.Arrays.stream(classIds)
+                allPosts = java.util.Arrays.stream(classIds)
                     .boxed()
                     .flatMap(classId -> postService.getVisiblePostsForParents(classId).stream())
-                    .distinct()
-                    .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()))
+                    .collect(java.util.stream.Collectors.toList());
+                
+                // Also get school-wide announcements (posts with null class_id)
+                // For now, we'll assume these are included in the above query
+            }
+        } else {
+            // For class activities, use the existing logic
+            if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
+                allPosts = postService.getPostsByTeacher(currentUserId);
+            } else {
+                // Parents see posts for their children's classes
+                int[] classIds = authorizationService.getAccessibleClassIds();
+                allPosts = java.util.Arrays.stream(classIds)
+                    .boxed()
+                    .flatMap(classId -> postService.getVisiblePostsForParents(classId).stream())
                     .collect(java.util.stream.Collectors.toList());
             }
-            
-            updatePostsTable(posts);
-            
-        } catch (Exception e) {
-            DialogFactory.showError(this, "Error loading posts: " + e.getMessage());
-        }
-    }
-    
-    private void updatePostsTable(List<Post> posts) {
-        DefaultTableModel model = postsTable.getTableModel();
-        model.setRowCount(0);
-        
-        for (Post post : posts) {
-            Object[] rowData = {
-                post.getId(),
-                post.getTitle(),
-                post.getClassName() != null ? post.getClassName() : "All Classes",
-                post.getVisibilityDisplay(),
-                post.getScheduledDate() != null ? post.getScheduledDate().toString() : "Immediate",
-                post.getCommentCount(),
-                post.getCreatedAt() != null ? post.getCreatedAt().toLocalDate().toString() : ""
-            };
-            model.addRow(rowData);
-        }
-    }
-    
-    private void loadComments() {
-        if (!"TEACHER".equals(currentUserRole) && !"PRINCIPAL".equals(currentUserRole)) {
-            return;
         }
         
+        List<Post> filteredPosts = allPosts.stream()
+            .filter(post -> postType.equals(post.getPostType()))
+            .sorted((p1, p2) -> {
+                // Sort pinned posts first, then by creation date
+                if (p1.isPinned() && !p2.isPinned()) return -1;
+                if (!p1.isPinned() && p2.isPinned()) return 1;
+                return p2.getCreatedAt().compareTo(p1.getCreatedAt());
+            })
+            .collect(java.util.stream.Collectors.toList());
+            
+        System.out.println("Filtered posts of type " + postType + ": " + filteredPosts.size());
+        return filteredPosts;
+    }
+    
+    private void displayPostsAsCards(List<Post> posts, JPanel container) {
+        container.removeAll();
+        
+        if (posts.isEmpty()) {
+            JLabel emptyLabel = new JLabel("<html><div style='text-align: center; color: gray;'>" +
+                                         "<h3>No posts available</h3>" +
+                                         "<p>No posts to display at this time.</p></div></html>");
+            emptyLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            container.add(emptyLabel);
+        } else {
+            for (Post post : posts) {
+                JPanel postCard = createPostCard(post);
+                container.add(postCard);
+                container.add(Box.createVerticalStrut(10)); // Spacing between cards
+            }
+        }
+        
+        container.revalidate();
+        container.repaint();
+    }
+    
+    private JPanel createPostCard(Post post) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        card.setBackground(Color.WHITE);
+        
+        // Set preferred and maximum size for proper display
+        card.setPreferredSize(new Dimension(600, 350)); // Minimum card size
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 500)); // Maximum height
+        card.setMinimumSize(new Dimension(400, 250)); // Minimum size
+        
+        // Header with title and metadata
+        JPanel headerPanel = createPostHeader(post);
+        card.add(headerPanel, BorderLayout.NORTH);
+        
+        // Content
+        JPanel contentPanel = createPostContent(post);
+        card.add(contentPanel, BorderLayout.CENTER);
+        
+        // Comments section
+        JPanel commentsPanel = createCommentsSection(post);
+        card.add(commentsPanel, BorderLayout.SOUTH);
+        
+        return card;
+    }
+    
+    private JPanel createPostHeader(Post post) {
+        JPanel header = new JPanel(new BorderLayout());
+        
+        // Title and pin indicator
+        String titleText = post.getTitle();
+        if (post.isPinned()) {
+            titleText = "📌 " + titleText;
+        }
+        JLabel titleLabel = new JLabel("<html><h3>" + titleText + "</h3></html>");
+        header.add(titleLabel, BorderLayout.WEST);
+        
+        // Metadata panel
+        JPanel metaPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        
+        // Post type badge
+        JLabel typeLabel = new JLabel(post.getPostTypeDisplay());
+        typeLabel.setOpaque(true);
+        typeLabel.setBackground(post.isSchoolAnnouncement() ? new Color(255, 165, 0) : new Color(100, 149, 237));
+        typeLabel.setForeground(Color.WHITE);
+        typeLabel.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
+        metaPanel.add(typeLabel);
+        
+        // Category for announcements
+        if (post.isSchoolAnnouncement() && post.getCategory() != null) {
+            JLabel categoryLabel = new JLabel(post.getCategoryDisplay());
+            categoryLabel.setOpaque(true);
+            categoryLabel.setBackground(Color.GRAY);
+            categoryLabel.setForeground(Color.WHITE);
+            categoryLabel.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
+            metaPanel.add(categoryLabel);
+        }
+        
+        // Class name for class activities
+        if (post.isClassActivity() && post.getClassName() != null) {
+            JLabel classLabel = new JLabel(post.getClassName());
+            classLabel.setOpaque(true);
+            classLabel.setBackground(new Color(60, 179, 113));
+            classLabel.setForeground(Color.WHITE);
+            classLabel.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
+            metaPanel.add(classLabel);
+        }
+        
+        header.add(metaPanel, BorderLayout.EAST);
+        
+        return header;
+    }
+    
+    private JPanel createPostContent(Post post) {
+        JPanel content = new JPanel(new BorderLayout());
+        content.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        
+        // Main content with proper text wrapping
+        JTextArea contentArea = new JTextArea(post.getContent());
+        contentArea.setEditable(false);
+        contentArea.setWrapStyleWord(true);
+        contentArea.setLineWrap(true);
+        contentArea.setOpaque(false);
+        contentArea.setFont(contentArea.getFont().deriveFont(14f)); // Slightly larger font
+        contentArea.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        
+        // Set preferred size for content area
+        contentArea.setPreferredSize(new Dimension(500, 60));
+        contentArea.setRows(3); // Minimum 3 rows
+        
+        // Wrap in scroll pane if content is long
+        JScrollPane contentScrollPane = new JScrollPane(contentArea);
+        contentScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        contentScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        contentScrollPane.setBorder(null);
+        contentScrollPane.setOpaque(false);
+        contentScrollPane.getViewport().setOpaque(false);
+        contentScrollPane.setPreferredSize(new Dimension(500, 80));
+        
+        content.add(contentScrollPane, BorderLayout.CENTER);
+        
+        // Metadata row with better spacing
+        JPanel metaRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        metaRow.setOpaque(false);
+        
+        // Create colored labels for metadata
+        JLabel dateLabel = createMetaLabel("📅 " + (post.getCreatedAt() != null ? 
+                              post.getCreatedAt().toLocalDate().toString() : "Unknown"), 
+                              new Color(100, 149, 237));
+        metaRow.add(dateLabel);
+        
+        if (post.getEventDate() != null) {
+            JLabel eventLabel = createMetaLabel("🎯 Event: " + post.getEventDate().toString(), 
+                                              new Color(255, 140, 0));
+            metaRow.add(eventLabel);
+        }
+        
+        if (post.getScheduledDate() != null) {
+            JLabel scheduleLabel = createMetaLabel("⏰ Scheduled: " + post.getScheduledDate().toString(), 
+                                                 new Color(50, 205, 50));
+            metaRow.add(scheduleLabel);
+        }
+        
+        JLabel visibilityLabel = createMetaLabel("👁️ " + post.getVisibilityDisplay(), 
+                                               new Color(128, 128, 128));
+        metaRow.add(visibilityLabel);
+        
+        content.add(metaRow, BorderLayout.SOUTH);
+        
+        return content;
+    }
+    
+    private JLabel createMetaLabel(String text, Color backgroundColor) {
+        JLabel label = new JLabel(text);
+        label.setOpaque(true);
+        label.setBackground(backgroundColor);
+        label.setForeground(Color.WHITE);
+        label.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
+        label.setFont(label.getFont().deriveFont(11f));
+        return label;
+    }
+    
+    private JPanel createCommentsSection(Post post) {
+        JPanel commentsSection = new JPanel(new BorderLayout());
+        commentsSection.setBorder(BorderFactory.createTitledBorder("Comments"));
+        
+        // Load and display comments
+        List<Comment> comments = new java.util.ArrayList<>();
         try {
-            List<Comment> comments = postService.getPendingComments(currentUserId);
-            updateCommentsTable(comments);
-            
+            comments = postService.getApprovedComments(post.getId());
         } catch (Exception e) {
-            DialogFactory.showError(this, "Error loading comments: " + e.getMessage());
+            // Keep empty list if error occurs
         }
-    }
-    
-    private void updateCommentsTable(List<Comment> comments) {
-        DefaultTableModel model = commentsTable.getTableModel();
-        model.setRowCount(0);
         
-        for (Comment comment : comments) {
-            Object[] rowData = {
-                comment.getId(),
-                comment.getPostTitle(),
-                comment.getAuthorName(),
-                comment.getContent().length() > 50 ? 
-                    comment.getContent().substring(0, 50) + "..." : comment.getContent(),
-                comment.getApprovalStatus(),
-                comment.getCreatedAt() != null ? comment.getCreatedAt().toLocalDate().toString() : ""
-            };
-            model.addRow(rowData);
-        }
-    }
-    
-    private void onPostSelected(int row) {
-        if (row >= 0) {
-            int postId = (Integer) postsTable.getValueAt(row, 0);
-            selectedPost = postService.getPostById(postId);
+        if (comments.isEmpty()) {
+            JLabel noCommentsLabel = new JLabel("No comments yet. Be the first to comment!");
+            noCommentsLabel.setForeground(Color.GRAY);
+            commentsSection.add(noCommentsLabel, BorderLayout.CENTER);
+        } else {
+            JPanel commentsContainer = new JPanel();
+            commentsContainer.setLayout(new BoxLayout(commentsContainer, BoxLayout.Y_AXIS));
             
-            if (selectedPost != null) {
-                loadPostToForm(selectedPost);
-                updatePostButtons();
+            for (Comment comment : comments) {
+                JPanel commentPanel = createCommentPanel(comment);
+                commentsContainer.add(commentPanel);
+                commentsContainer.add(Box.createVerticalStrut(5));
             }
-        }
-    }
-    
-    private void onCommentSelected(int row) {
-        if (row >= 0) {
-            int commentId = (Integer) commentsTable.getValueAt(row, 0);
-            // In a real implementation, you'd have a getCommentById method
-            selectedComment = new Comment();
-            selectedComment.setId(commentId);
-            updateCommentButtons();
-        }
-    }
-    
-    private void loadPostToForm(Post post) {
-        postFormBuilder.setValue(FIELD_TITLE, post.getTitle());
-        postFormBuilder.setValue(FIELD_CONTENT, post.getContent());
-        
-        if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
-            if (post.getClassName() != null) {
-                postFormBuilder.setValue(FIELD_CLASS, post.getClassName());
-            }
-            postFormBuilder.setValue(FIELD_VISIBILITY, post.getVisibility());
             
-            if (post.getScheduledDate() != null) {
-                postFormBuilder.setValue(FIELD_SCHEDULED_DATE, post.getScheduledDate().toString());
+            JScrollPane commentsScrollPane = new JScrollPane(commentsContainer);
+            commentsScrollPane.setPreferredSize(new Dimension(0, Math.min(150, comments.size() * 50)));
+            commentsScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            commentsSection.add(commentsScrollPane, BorderLayout.CENTER);
+        }
+        
+        // Add comment form for parents or teachers
+        if ("PARENT".equals(currentUserRole) || "TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
+            JPanel addCommentPanel = createAddCommentPanel(post);
+            commentsSection.add(addCommentPanel, BorderLayout.SOUTH);
+        }
+        
+        return commentsSection;
+    }
+    
+    private JPanel createCommentPanel(Comment comment) {
+        JPanel commentPanel = new JPanel(new BorderLayout());
+        commentPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        commentPanel.setBackground(new Color(248, 249, 250));
+        
+        // Comment header with author and date
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        headerPanel.setOpaque(false);
+        headerPanel.add(new JLabel("<html><b>" + comment.getAuthorName() + "</b></html>"));
+        headerPanel.add(new JLabel("•"));
+        headerPanel.add(new JLabel(comment.getCreatedAt() != null ? 
+                                 comment.getCreatedAt().toLocalDate().toString() : "Unknown"));
+        
+        // Comment content
+        JTextArea commentContent = new JTextArea(comment.getContent());
+        commentContent.setEditable(false);
+        commentContent.setWrapStyleWord(true);
+        commentContent.setLineWrap(true);
+        commentContent.setOpaque(false);
+        
+        commentPanel.add(headerPanel, BorderLayout.NORTH);
+        commentPanel.add(commentContent, BorderLayout.CENTER);
+        
+        return commentPanel;
+    }
+    
+    private JPanel createAddCommentPanel(Post post) {
+        JPanel addCommentPanel = new JPanel(new BorderLayout());
+        addCommentPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        
+        JTextArea commentTextArea = new JTextArea(2, 0);
+        commentTextArea.setWrapStyleWord(true);
+        commentTextArea.setLineWrap(true);
+        commentTextArea.setBorder(BorderFactory.createLoweredBevelBorder());
+        commentTextArea.setBackground(Color.WHITE);
+        
+        JButton addCommentButton = new JButton("Add Comment");
+        addCommentButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String commentText = commentTextArea.getText().trim();
+                if (!commentText.isEmpty()) {
+                    addComment(post, commentText);
+                    commentTextArea.setText("");
+                    refreshCurrentView(); // Refresh to show new comment
+                }
             }
-        }
+        });
+        
+        JPanel inputPanel = new JPanel(new BorderLayout());
+        inputPanel.add(new JLabel("Add a comment:"), BorderLayout.NORTH);
+        inputPanel.add(commentTextArea, BorderLayout.CENTER);
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.add(addCommentButton);
+        
+        addCommentPanel.add(inputPanel, BorderLayout.CENTER);
+        addCommentPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        return addCommentPanel;
     }
     
-    private void updatePostButtons() {
-        boolean canEdit = selectedPost != null && postService.canUserEditPost(selectedPost, currentUserId);
-        
-        if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
-            postButtonPanel.setButtonEnabled("Update", canEdit);
-            postButtonPanel.setButtonEnabled("Delete", canEdit);
-        }
-    }
-    
-    private void updateCommentButtons() {
-        boolean hasSelection = selectedComment != null;
-        
-        if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
-            commentButtonPanel.setButtonEnabled("Approve", hasSelection);
-            commentButtonPanel.setButtonEnabled("Reject", hasSelection);
-            commentButtonPanel.setButtonEnabled("Delete", hasSelection);
-        }
-    }
-    
-    private void createPost() {
-        if (!AuthUtil.checkPermissionWithMessage(authService,
-                AuthorizationService.PERM_CREATE_POSTS, "create posts")) {
-            return;
-        }
-        
-        if (!postFormBuilder.validateRequired()) {
-            return;
-        }
-        
+    private void addComment(Post post, String content) {
         try {
-            Post post = createPostFromForm();
+            Comment comment = new Comment(post.getId(), currentUserId, content);
             
-            boolean success = postService.createPost(post);
+            boolean success = postService.addApprovedComment(comment);
             if (success) {
-                DialogFactory.showSuccess(this, "Post created successfully!");
-                loadPosts();
-                clearPostForm();
-            } else {
-                DialogFactory.showError(this, "Failed to create post.");
-            }
-        } catch (Exception e) {
-            DialogFactory.showError(this, "Error creating post: " + e.getMessage());
-        }
-    }
-    
-    private void updatePost() {
-        if (selectedPost == null) {
-            DialogFactory.showError(this, "Please select a post to update.");
-            return;
-        }
-        
-        if (!postFormBuilder.validateRequired()) {
-            return;
-        }
-        
-        try {
-            Post post = createPostFromForm();
-            post.setId(selectedPost.getId());
-            post.setAuthorId(selectedPost.getAuthorId());
-            
-            boolean success = postService.updatePost(post);
-            if (success) {
-                DialogFactory.showSuccess(this, "Post updated successfully!");
-                loadPosts();
-                clearPostForm();
-            } else {
-                DialogFactory.showError(this, "Failed to update post.");
-            }
-        } catch (Exception e) {
-            DialogFactory.showError(this, "Error updating post: " + e.getMessage());
-        }
-    }
-    
-    private void deletePost() {
-        if (selectedPost == null) {
-            DialogFactory.showError(this, "Please select a post to delete.");
-            return;
-        }
-        
-        int result = JOptionPane.showConfirmDialog(this,
-            "Are you sure you want to delete this post?",
-            "Confirm Delete", JOptionPane.YES_NO_OPTION);
-            
-        if (result == JOptionPane.YES_OPTION) {
-            boolean success = postService.deletePost(selectedPost.getId(), currentUserId);
-            if (success) {
-                DialogFactory.showSuccess(this, "Post deleted successfully!");
-                loadPosts();
-                clearPostForm();
-            } else {
-                DialogFactory.showError(this, "Failed to delete post.");
-            }
-        }
-    }
-    
-    private void clearPostForm() {
-        postFormBuilder.clearAll();
-        selectedPost = null;
-        selectedPhotoData = null;
-        selectedPhotoFilename = null;
-        postsTable.clearSelection();
-        updatePostButtons();
-    }
-    
-    private void addComment() {
-        if (selectedPost == null) {
-            DialogFactory.showError(this, "Please select a post to comment on.");
-            return;
-        }
-        
-        if (!commentFormBuilder.validateRequired()) {
-            return;
-        }
-        
-        try {
-            String content = commentFormBuilder.getValue(FIELD_COMMENT).trim();
-            
-            Comment comment = new Comment(selectedPost.getId(), currentUserId, content);
-            
-            boolean success = postService.addComment(comment);
-            if (success) {
-                DialogFactory.showSuccess(this, "Comment added! It will be visible after teacher approval.");
-                commentFormBuilder.clearAll();
-                loadPosts(); // Refresh to update comment count
+                DialogFactory.showSuccess(this, "Comment added successfully!");
             } else {
                 DialogFactory.showError(this, "Failed to add comment.");
             }
@@ -446,212 +525,58 @@ public class PostsPanel extends JPanel {
         }
     }
     
-    private void approveComment() {
-        if (selectedComment == null) {
-            DialogFactory.showError(this, "Please select a comment to approve.");
+    /**
+     * Show create post dialog as a popup
+     */
+    private void showCreatePostDialog(String tabTitle) {
+        if (!AuthUtil.checkPermissionWithMessage(authService,
+                AuthorizationService.PERM_CREATE_POSTS, "create posts")) {
             return;
         }
         
-        boolean success = postService.approveComment(selectedComment.getId());
-        if (success) {
-            DialogFactory.showSuccess(this, "Comment approved successfully!");
-            loadComments();
+        // Determine post type based on tab title
+        String postType;
+        if (tabTitle.contains("Class Activities")) {
+            postType = Post.TYPE_CLASS_ACTIVITY;
         } else {
-            DialogFactory.showError(this, "Failed to approve comment.");
-        }
-    }
-    
-    private void rejectComment() {
-        if (selectedComment == null) {
-            DialogFactory.showError(this, "Please select a comment to reject.");
-            return;
+            postType = Post.TYPE_SCHOOL_ANNOUNCEMENT;
         }
         
-        boolean success = postService.rejectComment(selectedComment.getId());
-        if (success) {
-            DialogFactory.showSuccess(this, "Comment rejected successfully!");
-            loadComments();
-        } else {
-            DialogFactory.showError(this, "Failed to reject comment.");
-        }
-    }
-    
-    private void deleteComment() {
-        if (selectedComment == null) {
-            DialogFactory.showError(this, "Please select a comment to delete.");
-            return;
-        }
+        // Create FormBuilder for the popup
+        FormBuilder dialogFormBuilder = createFormBuilderForPostType(tabTitle);
         
-        int result = JOptionPane.showConfirmDialog(this,
-            "Are you sure you want to delete this comment?",
-            "Confirm Delete", JOptionPane.YES_NO_OPTION);
-            
-        if (result == JOptionPane.YES_OPTION) {
-            boolean success = postService.deleteCommentByTeacher(selectedComment.getId(), currentUserId);
-            if (success) {
-                DialogFactory.showSuccess(this, "Comment deleted successfully!");
-                loadComments();
-            } else {
-                DialogFactory.showError(this, "Failed to delete comment.");
-            }
-        }
-    }
-    
-    private void viewPostComments() {
-        if (selectedPost == null) {
-            DialogFactory.showError(this, "Please select a post to view comments.");
-            return;
-        }
+        // Create the dialog
+        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+        DialogFactory.FormDialog dialog = DialogFactory.showFormDialog(
+            parentFrame, 
+            "Create New " + (postType.equals(Post.TYPE_CLASS_ACTIVITY) ? "Class Activity" : "School Announcement"),
+            dialogFormBuilder
+        );
         
-        // Switch to comments tab and show comments for this post
-        if (mainTabbedPane.getTabCount() > 1) {
-            mainTabbedPane.setSelectedIndex(1);
-        }
-        
-        // In a full implementation, you'd filter comments by post
-        loadComments();
-    }
-    
-    private void searchPosts(String searchTerm) {
-        if (searchTerm == null || searchTerm.trim().isEmpty()) {
-            loadPosts();
-            return;
-        }
-        
-        // Simple search implementation - in practice, you'd have a dedicated search method
-        loadPosts();
-    }
-    
-    private void selectPhoto() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Image files", "jpg", "jpeg", "png", "gif"));
-        
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File selectedFile = fileChooser.getSelectedFile();
+        // Check if user clicked OK
+        if (dialog.isOkClicked()) {
             try {
-                BufferedImage image = ImageIO.read(selectedFile);
-                if (image != null) {
-                    // Resize image if too large
-                    BufferedImage resizedImage = resizeImage(image, 800, 600);
-                    
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    ImageIO.write(resizedImage, "jpg", baos);
-                    
-                    selectedPhotoData = baos.toByteArray();
-                    selectedPhotoFilename = selectedFile.getName();
-                    
-                    DialogFactory.showSuccess(this, "Photo selected: " + selectedPhotoFilename);
+                Post post = createPostFromFormBuilder(dialogFormBuilder, postType);
+                
+                boolean success = postService.createPost(post);
+                if (success) {
+                    DialogFactory.showSuccess(this, 
+                        post.isSchoolAnnouncement() ? "Announcement created successfully!" : "Post created successfully!");
+                    refreshCurrentView();
                 } else {
-                    DialogFactory.showError(this, "Invalid image file.");
+                    DialogFactory.showError(this, "Failed to create post.");
                 }
-            } catch (IOException e) {
-                DialogFactory.showError(this, "Error reading image file: " + e.getMessage());
+            } catch (Exception e) {
+                DialogFactory.showError(this, "Error creating post: " + e.getMessage());
             }
         }
     }
     
-    private BufferedImage resizeImage(BufferedImage original, int maxWidth, int maxHeight) {
-        int originalWidth = original.getWidth();
-        int originalHeight = original.getHeight();
-        
-        if (originalWidth <= maxWidth && originalHeight <= maxHeight) {
-            return original;
-        }
-        
-        double scaleX = (double) maxWidth / originalWidth;
-        double scaleY = (double) maxHeight / originalHeight;
-        double scale = Math.min(scaleX, scaleY);
-        
-        int newWidth = (int) (originalWidth * scale);
-        int newHeight = (int) (originalHeight * scale);
-        
-        BufferedImage resized = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = resized.createGraphics();
-        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2d.drawImage(original, 0, 0, newWidth, newHeight, null);
-        g2d.dispose();
-        
-        return resized;
-    }
-    
-    private Post createPostFromForm() throws Exception {
-        String title = postFormBuilder.getValue(FIELD_TITLE).trim();
-        String content = postFormBuilder.getValue(FIELD_CONTENT).trim();
-        
-        if (title.isEmpty() || content.isEmpty()) {
-            throw new Exception("Title and content are required.");
-        }
-        
-        Post post = new Post(title, content, currentUserId, null);
-        
-        if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
-            String classSelection = postFormBuilder.getValue(FIELD_CLASS).trim();
-            if (!classSelection.isEmpty() && !"All Classes".equals(classSelection)) {
-                // Extract class ID from selection (you'd need to implement this based on your dropdown format)
-                // For now, assume the class dropdown stores class IDs
-                try {
-                    int classId = extractClassIdFromSelection(classSelection);
-                    if (classId > 0) {
-                        post.setClassId(classId);
-                    }
-                } catch (Exception e) {
-                    // Ignore class selection error, post will be for all classes
-                }
-            }
-            
-            String visibility = postFormBuilder.getValue(FIELD_VISIBILITY).trim();
-            if (!visibility.isEmpty()) {
-                post.setVisibility(visibility);
-            }
-            
-            String scheduledDateStr = postFormBuilder.getValue(FIELD_SCHEDULED_DATE).trim();
-            if (!scheduledDateStr.isEmpty()) {
-                try {
-                    LocalDate scheduledDate = LocalDate.parse(scheduledDateStr);
-                    post.setScheduledDate(scheduledDate);
-                } catch (DateTimeParseException e) {
-                    throw new Exception("Invalid scheduled date format. Please use YYYY-MM-DD format.");
-                }
-            }
-        }
-        
-        // Add photo if selected
-        if (selectedPhotoData != null) {
-            post.setPhotoAttachment(selectedPhotoData);
-            post.setPhotoFilename(selectedPhotoFilename);
-        }
-        
-        return post;
-    }
-    
-    private void loadAvailableClasses() {
-        try {
-            java.util.List<model.Class> classes;
-            
-            if ("TEACHER".equals(currentUserRole)) {
-                // Teachers see only their assigned classes
-                classes = classDAO.findByTeacherId(currentUserId);
-            } else {
-                // Principals see all classes
-                classes = classDAO.findAll();
-            }
-            
-            String[] classOptions = new String[classes.size() + 1];
-            classOptions[0] = "All Classes";
-            
-            for (int i = 0; i < classes.size(); i++) {
-                model.Class clazz = classes.get(i);
-                classOptions[i + 1] = clazz.getName() + " (ID: " + clazz.getId() + ")";
-            }
-            
-            // Update the combo box
-            @SuppressWarnings("unchecked")
-            JComboBox<String> classCombo = (JComboBox<String>) postFormBuilder.getField(FIELD_CLASS).getInputComponent();
-            classCombo.setModel(new DefaultComboBoxModel<>(classOptions));
-            
-        } catch (Exception e) {
-            DialogFactory.showError(this, "Error loading classes: " + e.getMessage());
+    private void refreshCurrentView() {
+        if (Post.TYPE_CLASS_ACTIVITY.equals(currentPostFilter)) {
+            loadClassActivities();
+        } else {
+            loadSchoolAnnouncements();
         }
     }
     
@@ -660,7 +585,6 @@ public class PostsPanel extends JPanel {
             return 0;
         }
         
-        // Extract ID from format "ClassName (ID: 123)"
         int idStart = classSelection.lastIndexOf("ID: ");
         if (idStart != -1) {
             int idEnd = classSelection.lastIndexOf(")");
@@ -675,5 +599,145 @@ public class PostsPanel extends JPanel {
         }
         
         return 0;
+    }
+    
+    private boolean canViewAnnouncements() {
+        // Parents and teachers can view announcements
+        return true;
+    }
+    
+    /**
+     * Create a FormBuilder instance configured for a specific post type
+     */
+    private FormBuilder createFormBuilderForPostType(String tabTitle) {
+        String postType;
+        if (tabTitle.contains("Class Activities")) {
+            postType = Post.TYPE_CLASS_ACTIVITY;
+        } else {
+            postType = Post.TYPE_SCHOOL_ANNOUNCEMENT;
+        }
+        
+        System.out.println("Creating FormBuilder for tab: " + tabTitle + ", postType: " + postType);
+        
+        FormBuilder formBuilder = new FormBuilder("Create New Post", 2);
+        formBuilder.addTextField(FIELD_TITLE, "Title", true)
+                  .addTextArea(FIELD_CONTENT, "Content", 4, true);
+        
+        // Add form fields based on post type
+        if (Post.TYPE_CLASS_ACTIVITY.equals(postType)) {
+            formBuilder.addComboBox(FIELD_CLASS, "Class", new String[]{"Loading..."}, true);
+            // Load classes for this specific form
+            loadAvailableClassesForForm(formBuilder);
+        } else {
+            formBuilder.addComboBox(FIELD_CATEGORY, "Category", 
+                                 new String[]{"GENERAL", "EVENT", "HOLIDAY", "SCHEDULE"}, true)
+                      .addDateField(FIELD_EVENT_DATE, "Event Date (optional)", false);
+        }
+        
+        formBuilder.addComboBox(FIELD_VISIBILITY, "Visibility", 
+                             new String[]{"ALL", "PARENTS_ONLY", "TEACHERS_ONLY"}, true)
+                  .addDateField(FIELD_SCHEDULED_DATE, "Scheduled Date (optional)", false);
+        
+        return formBuilder;
+    }
+    
+    /**
+     * Load available classes for a specific FormBuilder instance
+     */
+    private void loadAvailableClassesForForm(FormBuilder formBuilder) {
+        try {
+            java.util.List<model.Class> classes;
+            
+            if ("TEACHER".equals(currentUserRole)) {
+                classes = classDAO.findByTeacherId(currentUserId);
+            } else {
+                classes = classDAO.findAll();
+            }
+            
+            String[] classOptions = new String[classes.size() + 1];
+            classOptions[0] = "All Classes";
+            
+            for (int i = 0; i < classes.size(); i++) {
+                model.Class clazz = classes.get(i);
+                classOptions[i + 1] = clazz.getName() + " (ID: " + clazz.getId() + ")";
+            }
+            
+            // Update the combo box
+            @SuppressWarnings("unchecked")
+            JComboBox<String> classCombo = (JComboBox<String>) formBuilder.getField(FIELD_CLASS).getInputComponent();
+            classCombo.setModel(new DefaultComboBoxModel<>(classOptions));
+            
+        } catch (Exception e) {
+            System.err.println("Error loading classes for form: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Create post from FormBuilder instance (works for both dialogs and tabs)
+     */
+    private Post createPostFromFormBuilder(FormBuilder formBuilder, String postType) throws Exception {
+        String title = formBuilder.getValue(FIELD_TITLE).trim();
+        String content = formBuilder.getValue(FIELD_CONTENT).trim();
+        
+        if (title.isEmpty() || content.isEmpty()) {
+            throw new Exception("Title and content are required.");
+        }
+        
+        Post post = new Post(title, content, currentUserId, null);
+        post.setPostType(postType);
+        
+        // Handle class activities
+        if (Post.TYPE_CLASS_ACTIVITY.equals(postType)) {
+            String classSelection = formBuilder.getValue(FIELD_CLASS).trim();
+            if (!classSelection.isEmpty() && !"All Classes".equals(classSelection)) {
+                try {
+                    int classId = extractClassIdFromSelection(classSelection);
+                    if (classId > 0) {
+                        post.setClassId(classId);
+                    }
+                } catch (Exception e) {
+                    // Ignore class selection error, post will be for all classes
+                }
+            }
+        }
+        
+        // Handle school announcements
+        if (Post.TYPE_SCHOOL_ANNOUNCEMENT.equals(postType)) {
+            String category = formBuilder.getValue(FIELD_CATEGORY).trim();
+            if (!category.isEmpty()) {
+                post.setCategory(category);
+            }
+            
+            String eventDateStr = formBuilder.getValue(FIELD_EVENT_DATE).trim();
+            if (!eventDateStr.isEmpty()) {
+                try {
+                    LocalDate eventDate = LocalDate.parse(eventDateStr);
+                    post.setEventDate(eventDate);
+                } catch (DateTimeParseException e) {
+                    throw new Exception("Invalid event date format. Please use YYYY-MM-DD format.");
+                }
+            }
+            
+            // For now, default to not pinned (would need custom checkbox implementation)
+            post.setPinned(false);
+        }
+        
+        // Common fields
+        String visibility = formBuilder.getValue(FIELD_VISIBILITY).trim();
+        if (!visibility.isEmpty()) {
+            post.setVisibility(visibility);
+        }
+        
+        String scheduledDateStr = formBuilder.getValue(FIELD_SCHEDULED_DATE).trim();
+        if (!scheduledDateStr.isEmpty()) {
+            try {
+                LocalDate scheduledDate = LocalDate.parse(scheduledDateStr);
+                post.setScheduledDate(scheduledDate);
+            } catch (DateTimeParseException e) {
+                throw new Exception("Invalid scheduled date format. Please use YYYY-MM-DD format.");
+            }
+        }
+        
+        return post;
     }
 }

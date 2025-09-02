@@ -123,6 +123,19 @@ public class PostService {
     }
     
     /**
+     * Add a pre-approved comment to a post (no moderation)
+     */
+    public boolean addApprovedComment(Comment comment) {
+        if (!validateComment(comment)) {
+            return false;
+        }
+        
+        // Ensure comment is approved
+        comment.setApproved(true);
+        return commentDAO.createComment(comment);
+    }
+    
+    /**
      * Get approved comments for a post
      */
     public List<Comment> getApprovedComments(int postId) {

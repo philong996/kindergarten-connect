@@ -19,9 +19,10 @@ public class PostDAO {
      */
     public boolean createPost(Post post) {
         String sql = """
-            INSERT INTO posts (title, content, author_id, class_id, photo_attachment, 
-                             photo_filename, scheduled_date, visibility, is_published)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO posts (title, content, author_id, class_id, post_type, category,
+                             photo_attachment, photo_filename, scheduled_date, event_date,
+                             visibility, is_published, is_pinned)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
         
         try (Connection conn = DatabaseUtil.getConnection();
@@ -37,22 +38,40 @@ public class PostDAO {
                 stmt.setNull(4, Types.INTEGER);
             }
             
-            if (post.getPhotoAttachment() != null) {
-                stmt.setBytes(5, post.getPhotoAttachment());
-                stmt.setString(6, post.getPhotoFilename());
+            // Set post type (this was missing!)
+            stmt.setString(5, post.getPostType() != null ? post.getPostType() : Post.TYPE_CLASS_ACTIVITY);
+            
+            // Set category (for announcements)
+            if (post.getCategory() != null) {
+                stmt.setString(6, post.getCategory());
             } else {
-                stmt.setNull(5, Types.BINARY);
                 stmt.setNull(6, Types.VARCHAR);
             }
             
-            if (post.getScheduledDate() != null) {
-                stmt.setDate(7, Date.valueOf(post.getScheduledDate()));
+            if (post.getPhotoAttachment() != null) {
+                stmt.setBytes(7, post.getPhotoAttachment());
+                stmt.setString(8, post.getPhotoFilename());
             } else {
-                stmt.setNull(7, Types.DATE);
+                stmt.setNull(7, Types.BINARY);
+                stmt.setNull(8, Types.VARCHAR);
             }
             
-            stmt.setString(8, post.getVisibility());
-            stmt.setBoolean(9, post.isPublished());
+            if (post.getScheduledDate() != null) {
+                stmt.setDate(9, Date.valueOf(post.getScheduledDate()));
+            } else {
+                stmt.setNull(9, Types.DATE);
+            }
+            
+            // Set event date (for announcements)
+            if (post.getEventDate() != null) {
+                stmt.setDate(10, Date.valueOf(post.getEventDate()));
+            } else {
+                stmt.setNull(10, Types.DATE);
+            }
+            
+            stmt.setString(11, post.getVisibility());
+            stmt.setBoolean(12, post.isPublished());
+            stmt.setBoolean(13, post.isPinned());
             
             int rowsAffected = stmt.executeUpdate();
             
@@ -220,9 +239,9 @@ public class PostDAO {
     public boolean updatePost(Post post) {
         String sql = """
             UPDATE posts 
-            SET title = ?, content = ?, class_id = ?, photo_attachment = ?, 
-                photo_filename = ?, scheduled_date = ?, visibility = ?, 
-                is_published = ?, updated_at = CURRENT_TIMESTAMP
+            SET title = ?, content = ?, class_id = ?, post_type = ?, category = ?,
+                photo_attachment = ?, photo_filename = ?, scheduled_date = ?, event_date = ?,
+                visibility = ?, is_published = ?, is_pinned = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ? AND author_id = ?
         """;
         
@@ -238,24 +257,39 @@ public class PostDAO {
                 stmt.setNull(3, Types.INTEGER);
             }
             
-            if (post.getPhotoAttachment() != null) {
-                stmt.setBytes(4, post.getPhotoAttachment());
-                stmt.setString(5, post.getPhotoFilename());
+            stmt.setString(4, post.getPostType() != null ? post.getPostType() : Post.TYPE_CLASS_ACTIVITY);
+            
+            if (post.getCategory() != null) {
+                stmt.setString(5, post.getCategory());
             } else {
-                stmt.setNull(4, Types.BINARY);
                 stmt.setNull(5, Types.VARCHAR);
             }
             
-            if (post.getScheduledDate() != null) {
-                stmt.setDate(6, Date.valueOf(post.getScheduledDate()));
+            if (post.getPhotoAttachment() != null) {
+                stmt.setBytes(6, post.getPhotoAttachment());
+                stmt.setString(7, post.getPhotoFilename());
             } else {
-                stmt.setNull(6, Types.DATE);
+                stmt.setNull(6, Types.BINARY);
+                stmt.setNull(7, Types.VARCHAR);
             }
             
-            stmt.setString(7, post.getVisibility());
-            stmt.setBoolean(8, post.isPublished());
-            stmt.setInt(9, post.getId());
-            stmt.setInt(10, post.getAuthorId());
+            if (post.getScheduledDate() != null) {
+                stmt.setDate(8, Date.valueOf(post.getScheduledDate()));
+            } else {
+                stmt.setNull(8, Types.DATE);
+            }
+            
+            if (post.getEventDate() != null) {
+                stmt.setDate(9, Date.valueOf(post.getEventDate()));
+            } else {
+                stmt.setNull(9, Types.DATE);
+            }
+            
+            stmt.setString(10, post.getVisibility());
+            stmt.setBoolean(11, post.isPublished());
+            stmt.setBoolean(12, post.isPinned());
+            stmt.setInt(13, post.getId());
+            stmt.setInt(14, post.getAuthorId());
             
             return stmt.executeUpdate() > 0;
             
@@ -374,6 +408,12 @@ public class PostDAO {
             post.setClassId(classId);
         }
         
+        // Set post type (this was missing!)
+        post.setPostType(rs.getString("post_type"));
+        
+        // Set category (for announcements)
+        post.setCategory(rs.getString("category"));
+        
         post.setPhotoAttachment(rs.getBytes("photo_attachment"));
         post.setPhotoFilename(rs.getString("photo_filename"));
         
@@ -382,8 +422,15 @@ public class PostDAO {
             post.setScheduledDate(scheduledDate.toLocalDate());
         }
         
+        // Set event date (for announcements)
+        Date eventDate = rs.getDate("event_date");
+        if (eventDate != null) {
+            post.setEventDate(eventDate.toLocalDate());
+        }
+        
         post.setVisibility(rs.getString("visibility"));
         post.setPublished(rs.getBoolean("is_published"));
+        post.setPinned(rs.getBoolean("is_pinned")); // This was missing!
         
         Timestamp createdAt = rs.getTimestamp("created_at");
         if (createdAt != null) {
