@@ -121,6 +121,7 @@ public class FormBuilder {
      */
     public JPanel build() {
         JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setOpaque(false);
         
         if (title != null) {
             formPanel.setBorder(BorderFactory.createTitledBorder(title));

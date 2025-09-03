@@ -1,6 +1,7 @@
 package ui.components;
 
 import javax.swing.*;
+
 import java.awt.*;
 
 public class CustomMessageDialog extends JDialog {

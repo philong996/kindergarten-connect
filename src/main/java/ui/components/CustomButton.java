@@ -6,12 +6,37 @@ import java.awt.event.*;
 
 public class CustomButton extends JButton {
 
-    private Color backgroundColor = AppColor.getColor("pinkOrange"); // màu nền
-    private Color hoverColor = AppColor.getColor("lightPink");      // màu khi hover
+    private Color backgroundColor = AppColor.getColor("coralRed"); // màu nền
+    private Color hoverColor = AppColor.getColor("bubblegumPink");      // màu khi hover
     private Color textColor = Color.WHITE;                   // màu chữ
     private int arc = 20; // bo tròn
 
     public CustomButton(String text) {
+        super(text);
+        setContentAreaFilled(false); // tắt fill mặc định
+        setOpaque(false); // tắt nền mặc định
+        setFocusPainted(false);
+        setBorderPainted(false);
+        setForeground(textColor);
+        setBackground(backgroundColor);
+        setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+    
+        // Hover effect
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                setBackground(hoverColor);
+            }
+    
+            @Override
+            public void mouseExited(MouseEvent e) {
+                setBackground(backgroundColor);
+            }
+        });
+    }
+
+    public CustomButton(String text, Color backgroundColor, Color hoverColor, Color textColor) {
         super(text);
         setContentAreaFilled(false); // tắt fill mặc định
         setOpaque(false); // tắt nền mặc định

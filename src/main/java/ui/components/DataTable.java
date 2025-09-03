@@ -42,11 +42,13 @@ public class DataTable extends JPanel {
         table.setRowHeight(25);
         table.setGridColor(Color.LIGHT_GRAY);
         table.setShowGrid(true);
-        
+        table.setOpaque(false);
+        table.setBackground(new Color(0, 0, 0, 0));
         // Add table header styling
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-        table.getTableHeader().setBackground(new Color(240, 240, 240));
-        table.getTableHeader().setBorder(BorderFactory.createRaisedBevelBorder());
+        table.getTableHeader().setOpaque(true);
+        table.getTableHeader().setFont(table.getTableHeader().getFont().deriveFont(Font.BOLD));
+        table.getTableHeader().setBackground(AppColor.getColor("lightOrange"));
+        table.getTableHeader().setBorder(BorderFactory.createLineBorder(AppColor.getColor("yellowOrange"), 2, true));
         
         // Create sorter
         sorter = new TableRowSorter<>(tableModel);
@@ -56,6 +58,9 @@ public class DataTable extends JPanel {
         scrollPane = new JScrollPane(table);
         scrollPane.setPreferredSize(new Dimension(800, 300));
         scrollPane.setBorder(BorderFactory.createLoweredBevelBorder());
+        scrollPane.setOpaque(false);
+        // tableScrollPane.getViewport().setOpaque(false);
+        scrollPane.getViewport().setBackground(AppColor.getColor("lightOrange"));
     }
     
     private void setupLayout() {

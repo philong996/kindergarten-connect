@@ -6,11 +6,12 @@ import model.Student;
 import ui.components.AppColor;
 import ui.components.HeaderPanel;
 import ui.panels.PhysicalDevelopmentPanel;
+import ui.panels.AvatarSelector;
 import ui.panels.ChildProfilePanel;
 import ui.panels.PostsPanel;
 import ui.panels.ChatPanel;
 import ui.panels.AttendanceHistoryPanel;
-
+import util.ProfileImageUtil;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
@@ -32,7 +33,7 @@ public class ParentPage extends BaseAuthenticatedPage {
     private JComboBox<String> childCombo;
     private List<Student> children;
     private ChildProfilePanel childProfilePanel;
-    
+    private AvatarSelector avatarSelector;   
     public ParentPage(AuthService authService) {
         super(authService);
         this.parentService = new ParentService();
@@ -64,8 +65,8 @@ public class ParentPage extends BaseAuthenticatedPage {
         
         // Initialize mainPanel first before using it
         mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(AppColor.getColor("cream"));
-        
+        mainPanel.setBackground(AppColor.getColor("culture"));
+         
         // Child Development tab
         childDevPanel = createChildDevelopmentTab();
         
@@ -77,12 +78,12 @@ public class ParentPage extends BaseAuthenticatedPage {
         
         // Create selected child detail panel container
         JPanel detailPanel = new JPanel(new BorderLayout());
-        detailPanel.setBorder(BorderFactory.createTitledBorder("Selected Child Details"));
+        // detailPanel.setOpaque(false);
         
         JLabel instructionLabel = new JLabel("Select a child from the dropdown above to view details", SwingConstants.CENTER);
         instructionLabel.setFont(new Font("Arial", Font.ITALIC, 14));
         instructionLabel.setForeground(Color.GRAY);
-        detailPanel.add(instructionLabel, BorderLayout.CENTER);
+        // detailPanel.add(instructionLabel, BorderLayout.CENTER);
         
         // Store reference for updates (mainPanel is now initialized)
         mainPanel.putClientProperty("detailPanel", detailPanel);
@@ -90,25 +91,34 @@ public class ParentPage extends BaseAuthenticatedPage {
         // Add tabs with Child Profile first (default selected)
         tabbedPane.addTab("Child Profile", detailPanel);
         tabbedPane.addTab("Attendance History", attendanceHistoryPanel);
+
         tabbedPane.addTab("Class Posts", createPostsTab());
         tabbedPane.addTab("Messages", createMessagesTab());
         tabbedPane.addTab("Child Development", childDevPanel);
+        tabbedPane.addTab("Child Profile", detailPanel);
+        tabbedPane.setForeground(AppColor.getColor("darkGreen"));
         
         // Set Child Profile as the default selected tab
         tabbedPane.setSelectedIndex(0);
+        tabbedPane.setBackground(AppColor.getColor("greenBlue"));
         
         mainPanel.add(childSelectionPanel, BorderLayout.NORTH);
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
         
         // Initialize with first child if available
-        if (!children.isEmpty()) {
-            childCombo.setSelectedIndex(0);
-            onChildSelectionChanged();
+        avatarSelector = new AvatarSelector(children);
+        avatarSelector.setOnAvatarChange(this::updateChildProfileDetails);
+        Student defaultStudent = avatarSelector.getSelectedStudent();
+        if (defaultStudent != null) {
+            updateChildProfileDetails(defaultStudent);
+            updateChildDevelopmentPanel(defaultStudent);
+            updateAttendanceHistoryPanel(defaultStudent);
         }
     }
     
     private JPanel createChildSelectionPanel() {
         JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
         panel.setBorder(BorderFactory.createTitledBorder("Children Overview"));
         
         if (children.isEmpty()) {
@@ -118,35 +128,29 @@ public class ParentPage extends BaseAuthenticatedPage {
         }
         
         // Create overview statistics panel at the top
-        JPanel statsPanel = createOverviewStatsPanel();
-        panel.add(statsPanel, BorderLayout.NORTH);
+        // JPanel statsPanel = createOverviewStatsPanel();
+        // panel.add(statsPanel, BorderLayout.NORTH);
         
-        // Create child selection section
         JPanel selectionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        selectionPanel.setBorder(BorderFactory.createTitledBorder("Select Child"));
+        selectionPanel.setOpaque(false);
+        selectionPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY), "Select Child"));
         
-        JLabel label = new JLabel("Child: ");
-        childCombo = new JComboBox<>();
+        AvatarSelector avatarSelector = new AvatarSelector(children);
+        avatarSelector.setToolTipText("Click to select a different child");
         
-        // Populate combo box
-        for (Student child : children) {
-            String displayName = child.getName() + " (Age: " + child.getAge() + ")";
-            childCombo.addItem(displayName);
-        }
-        
-        // Add selection listener
-        childCombo.addActionListener(e -> onChildSelectionChanged());
-        
-        selectionPanel.add(label);
-        selectionPanel.add(childCombo);
-        
-        panel.add(selectionPanel, BorderLayout.SOUTH);
-        
+        avatarSelector.setOnAvatarChange(selectedStudent -> {
+            updateChildProfileDetails(selectedStudent);
+            updateChildDevelopmentPanel(selectedStudent);
+            updateAttendanceHistoryPanel(selectedStudent);
+        });
+        // selectionPanel.add(avatarSelector, BorderLayout.WEST);
+        panel.add(avatarSelector, BorderLayout.SOUTH);
         return panel;
     }
     
     private JPanel createOverviewStatsPanel() {
         JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
         panel.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createEtchedBorder(), 
             "Children Overview Statistics", 
@@ -156,6 +160,7 @@ public class ParentPage extends BaseAuthenticatedPage {
         ));
         
         JPanel statsGrid = new JPanel(new GridLayout(1, 4, 10, 0));
+        statsGrid.setOpaque(false);
         statsGrid.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
         // Create stats labels
@@ -176,7 +181,7 @@ public class ParentPage extends BaseAuthenticatedPage {
         statsGrid.add(perfectAttendanceLabel);
         statsGrid.add(totalRecordsLabel);
         
-        panel.add(statsGrid, BorderLayout.CENTER);
+        // panel.add(statsGrid, BorderLayout.CENTER);
         
         // Store references for updating
         panel.putClientProperty("totalChildrenLabel", totalChildrenLabel);
@@ -209,44 +214,40 @@ public class ParentPage extends BaseAuthenticatedPage {
         }
     }
     
-    private void onChildSelectionChanged() {
-        if (childCombo == null || children.isEmpty()) return;
+    // private void onChildSelectionChanged() {
+    //     if (childCombo == null || children.isEmpty()) return;
         
-        int selectedIndex = childCombo.getSelectedIndex();
-        if (selectedIndex < 0 || selectedIndex >= children.size()) return;
+    //     int selectedIndex = childCombo.getSelectedIndex();
+    //     if (selectedIndex < 0 || selectedIndex >= children.size()) return;
         
-        Student selectedChild = children.get(selectedIndex);
+    //     Student selectedChild = children.get(selectedIndex);
         
-        // Update the child profile tab with selected child details
-        updateChildProfileDetails(selectedChild);
-        
+    //     // Update the child profile tab with selected child details
+    //     updateChildProfileDetails(selectedChild);
         // Update the development tab
-        updateChildDevelopmentPanel(selectedChild);
+        // updateChildDevelopmentPanel(selectedChild);
         
         // Update the attendance history tab
-        updateAttendanceHistoryPanel(selectedChild);
-    }
+        // updateAttendanceHistoryPanel(selectedChild);
+    // }
     
     private void updateChildProfileDetails(Student child) {
-        // Find the detail panel stored in mainPanel
         JPanel detailPanel = (JPanel) mainPanel.getClientProperty("detailPanel");
+        // detailPanel.setBackground(AppColor.getColor("culture"));
+        detailPanel.setOpaque(false);
         
+
         if (detailPanel != null) {
             // Clear existing content
             detailPanel.removeAll();
             
             // Update the child profile panel with the selected child
             childProfilePanel.updateChild(child);
-            
-            // Add the child profile panel to a scroll pane
-            JScrollPane scrollPane = new JScrollPane(childProfilePanel);
-            scrollPane.setBorder(null);
-            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-            detailPanel.add(scrollPane, BorderLayout.CENTER);
-            
+            detailPanel.add(childProfilePanel, BorderLayout.CENTER);
+
             detailPanel.revalidate();
             detailPanel.repaint();
+            
         }
     }
     
@@ -256,17 +257,20 @@ public class ParentPage extends BaseAuthenticatedPage {
             childDevPanel.removeAll();
             
             // Create new PhysicalDevelopmentPanel for the selected child
+
+            
             PhysicalDevelopmentPanel physicalPanel = new PhysicalDevelopmentPanel(
-                selectedChild.getId(), selectedChild.getName()
+                selectedChild.getId(), selectedChild.getName(), true
             );
             
             // Add header info about selected child
             JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            headerPanel.add(new JLabel("Physical development data for: " + selectedChild.getName() + " (Age: " + selectedChild.getAge() + ")"));
-            
+            headerPanel.setOpaque(false);
+            // headerPanel.add(new JLabel("Physical development data for: " + selectedChild.getName() + " (Age: " + selectedChild.getAge() + ")"));
+            headerPanel.setOpaque(false);
             childDevPanel.add(headerPanel, BorderLayout.NORTH);
             childDevPanel.add(physicalPanel, BorderLayout.CENTER);
-            
+            childDevPanel.setOpaque(false);
             childDevPanel.revalidate();
             childDevPanel.repaint();
         }
@@ -304,6 +308,7 @@ public class ParentPage extends BaseAuthenticatedPage {
 
     private JPanel createChildDevelopmentTab() {
         JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
         
         if (children.isEmpty()) {
             JLabel noChildrenLabel = new JLabel("No children found for your account.", SwingConstants.CENTER);
@@ -340,6 +345,7 @@ public class ParentPage extends BaseAuthenticatedPage {
         
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(postsPanel, BorderLayout.CENTER);
+        panel.setOpaque(false);
         
         return panel;
     }

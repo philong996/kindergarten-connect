@@ -20,7 +20,7 @@ public class ClassManagementPanel extends JPanel {
     private DataTable classTable;
     private SearchPanel searchPanel;
     private FormBuilder formBuilder;
-    private ButtonPanel buttonPanel;
+    private ButtonPanel1 buttonPanel;
     private JPanel statisticsPanel;
     
     // Form field IDs
@@ -52,12 +52,15 @@ public class ClassManagementPanel extends JPanel {
     
     private void initializeComponents() {
         // Create search panel
+        setOpaque(false);
         searchPanel = SearchPanel.createWithClear("Search classes:", this::searchClasses, this::loadClassData);
+        searchPanel.setOpaque(false);
         
         // Create data table
         String[] columnNames = {"ID", "Class Name", "Grade Level", "Teacher", "Enrollment", "Capacity", "Available Spots", "Utilization %"};
         classTable = new DataTable(columnNames);
         classTable.setRowSelectionHandler(this::onRowSelected);
+        classTable.setOpaque(false);
         
         // Create form builder
         formBuilder = new FormBuilder("Class Information", 2);
@@ -70,7 +73,7 @@ public class ClassManagementPanel extends JPanel {
         formBuilder.setValue(FIELD_CAPACITY, String.valueOf(ClassService.DEFAULT_CAPACITY));
         
         // Create button panel
-        buttonPanel = ButtonPanel.createCrudPanel(
+        buttonPanel = ButtonPanel1.createCrudPanel(
             e -> addClass(),
             e -> updateClass(),
             e -> deleteClass(),
@@ -78,10 +81,10 @@ public class ClassManagementPanel extends JPanel {
         );
         
         // Add custom buttons for teacher management
-        buttonPanel.addButton("Assign Teacher", e -> assignTeacher());
-        buttonPanel.addButton("Remove Teacher", e -> removeTeacher());
-        buttonPanel.addButton("View Students", e -> viewStudents());
-        buttonPanel.addButton("Refresh", e -> refreshData());
+        // buttonPanel.addButton("Assign Teacher", e -> assignTeacher());
+        // buttonPanel.addButton("Remove Teacher", e -> removeTeacher());
+        buttonPanel.addButton("View Students", e -> viewStudents(), 150, 30);
+        // buttonPanel.addButton("Refresh", e -> refreshData());
         
         // Create statistics panel
         statisticsPanel = createStatisticsPanel();
@@ -97,6 +100,7 @@ public class ClassManagementPanel extends JPanel {
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.add(searchPanel, BorderLayout.NORTH);
         topPanel.add(statisticsPanel, BorderLayout.SOUTH);
+        topPanel.setOpaque(false);
         add(topPanel, BorderLayout.NORTH);
         
         // Center: Table
@@ -106,6 +110,7 @@ public class ClassManagementPanel extends JPanel {
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.add(formBuilder.build(), BorderLayout.CENTER);
         bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
+        bottomPanel.setOpaque(false);
         
         add(bottomPanel, BorderLayout.SOUTH);
     }
@@ -120,8 +125,8 @@ public class ClassManagementPanel extends JPanel {
         buttonPanel.setButtonEnabled("Add", canManageClasses);
         buttonPanel.setButtonEnabled("Update", canManageClasses && selectedClass != null);
         buttonPanel.setButtonEnabled("Delete", canManageClasses && selectedClass != null);
-        buttonPanel.setButtonEnabled("Assign Teacher", canManageClasses && selectedClass != null);
-        buttonPanel.setButtonEnabled("Remove Teacher", canManageClasses && selectedClass != null);
+        // buttonPanel.setButtonEnabled("Assign Teacher", canManageClasses && selectedClass != null);
+        // buttonPanel.setButtonEnabled("Remove Teacher", canManageClasses && selectedClass != null);
         
         if (!canManageClasses) {
             // Show tooltip explaining restrictions
@@ -405,7 +410,7 @@ public class ClassManagementPanel extends JPanel {
     
     private void viewStudents() {
         if (selectedClass == null) {
-            DialogFactory.showWarning(this, "Please select a class first.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Error", "Please select a class first.", CustomMessageDialog.Type.ERROR);
             return;
         }
         
@@ -440,8 +445,8 @@ public class ClassManagementPanel extends JPanel {
         classTable.clearSelection();
         buttonPanel.setButtonEnabled("Update", false);
         buttonPanel.setButtonEnabled("Delete", false);
-        buttonPanel.setButtonEnabled("Assign Teacher", false);
-        buttonPanel.setButtonEnabled("Remove Teacher", false);
+        // buttonPanel.setButtonEnabled("Assign Teacher", false);
+        // buttonPanel.setButtonEnabled("Remove Teacher", false);
         buttonPanel.setButtonEnabled("View Students", false);
     }
     
@@ -548,7 +553,7 @@ public class ClassManagementPanel extends JPanel {
     private JPanel createStatisticsPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panel.setBorder(BorderFactory.createTitledBorder("Class Statistics"));
-        
+        panel.setOpaque(false);
         // Will be updated in updateStatistics()
         panel.add(new JLabel("Loading statistics..."));
         

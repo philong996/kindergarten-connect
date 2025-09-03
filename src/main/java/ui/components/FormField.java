@@ -27,11 +27,12 @@ public class FormField extends JPanel {
     private void initializeComponents(String labelText) {
         String displayText = required ? labelText + " *" : labelText;
         label = new JLabel(displayText);
-        label.setFont(new Font("Arial", Font.PLAIN, 12));
+        setOpaque(false);
+        // label.setFont(new Font("Arial", Font.PLAIN, 12));
         
-        if (required) {
-            label.setForeground(Color.BLACK);
-        }
+        // if (required) {
+        //     label.setForeground(Color.BLACK);
+        // }
         
         // Set preferred size for input component if not already set
         if (inputComponent.getPreferredSize().width < 200) {

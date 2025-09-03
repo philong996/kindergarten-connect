@@ -19,7 +19,7 @@ public class App {
         // Font appFont = CustomFont.getBalooFont(14f);
         Font appFont = new Font("Comic Sans MS", Font.PLAIN, 14);
         AppStyle.setUIFont(appFont);
-        AppStyle.setUIForeground(AppColor.getColor("green"));
+        AppStyle.setUIForeground(AppColor.getColor("darkGreen"));
 
         // Set Look and Feel
         try {

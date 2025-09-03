@@ -47,7 +47,7 @@ public class LoginWindow extends JFrame {
         ImageIcon bgIcon = new ImageIcon(getClass().getResource("/images/background01.png"));
         Image bgImage = bgIcon.getImage();
         JPanel mainPanel = new BackgroundPanel(bgImage);
-        mainPanel.setBackground(AppColor.getColor("cream"));
+        mainPanel.setBackground(AppColor.getColor("culture"));
         GridBagConstraints gbc = new GridBagConstraints();
 
         // logo
@@ -62,7 +62,7 @@ public class LoginWindow extends JFrame {
         mainPanel.add(logJLabel, gbc);
 
         // Title
-        JLabel titleLabel = new JLabel("Kindergarten BÉ NGOAN");
+        JLabel titleLabel = new JLabel("BÉ NGOAN KMS");
         titleLabel.setFont(new Font("Comic Sans MS", Font.BOLD, 20));
         // titleLabel.setFont(CustomFont.getBalooFont(Font.BOLD, 20f));
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -179,6 +179,7 @@ public class LoginWindow extends JFrame {
                 passwordField.setText("");
             }
         } catch (Exception ex) {
+            System.err.println("Login error: " + ex.getMessage());
             CustomMessageDialog.showMessage(this, "Error", 
                     "Database connection error: " + ex.getMessage(), 
                     CustomMessageDialog.Type.ERROR);
