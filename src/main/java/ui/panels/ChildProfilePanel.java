@@ -1,6 +1,10 @@
 package ui.panels;
 
 import service.ParentService;
+import ui.components.AppColor;
+import ui.components.CustomButton;
+import ui.components.CustomMessageDialog;
+import ui.components.RoundedBorder;
 import model.Student;
 import util.ProfileImageUtil;
 
@@ -9,6 +13,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.geom.RoundRectangle2D;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,6 +37,7 @@ public class ChildProfilePanel extends JPanel {
         
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        setOpaque(false);
     }
     
     /**
@@ -44,13 +50,31 @@ public class ChildProfilePanel extends JPanel {
         removeAll();
         
         if (currentProfile != null) {
-            // Create image panel (top)
             JPanel imagePanel = createImageDisplayPanel();
-            add(imagePanel, BorderLayout.NORTH);
-            
-            // Create info panel (center)
             JPanel infoPanel = createProfileInfoPanel();
-            add(infoPanel, BorderLayout.CENTER);
+            // imagePanel.setBackground(AppColor.getColor("yellowOrange"));
+            imagePanel.setOpaque(false);
+            infoPanel.setOpaque(false);
+
+            JScrollPane scrollPane = new JScrollPane(infoPanel);
+            scrollPane.setBorder(null);
+            scrollPane.setOpaque(false);
+            scrollPane.getViewport().setOpaque(false);
+            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            scrollPane.setOpaque(false);
+
+            // Dùng JSplitPane để chia 40/60
+            JSplitPane splitPane = new JSplitPane(
+                JSplitPane.HORIZONTAL_SPLIT,
+                imagePanel,
+                scrollPane
+            );
+            splitPane.setResizeWeight(0.3); 
+            splitPane.setDividerSize(0);    
+            splitPane.setBorder(null);      
+            splitPane.setOpaque(false);
+            add(splitPane, BorderLayout.CENTER);
         } else {
             JLabel errorLabel = new JLabel("Unable to load profile for " + child.getName(), SwingConstants.CENTER);
             add(errorLabel, BorderLayout.CENTER);
@@ -66,15 +90,18 @@ public class ChildProfilePanel extends JPanel {
         
         // Profile image display
         byte[] imageData = (byte[]) currentProfile.get("profile_image");
-        ImageIcon profileImage = ProfileImageUtil.loadProfileImageFromBytes(imageData, 150, 150);
+        ImageIcon profileImage = ProfileImageUtil.loadProfileImageFromBytes(imageData, 300, 300);
+
         imageLabel = new JLabel(profileImage);
         imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        imageLabel.setBorder(BorderFactory.createLoweredBevelBorder());
+        // imageLabel.setBorder(BorderFactory.createLoweredBevelBorder());
+        imageLabel.setBorder(new RoundedBorder(10, AppColor.getColor("greenBlue"), 1));
         
         // Create button panel for image actions
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        changeImageButton = new JButton("Change Profile Image");
-        changeImageButton.setFont(new Font("Arial", Font.PLAIN, 12));
+        buttonPanel.setOpaque(false);
+        // CustomButton changeImageButton = new CustomButton("Change Profile Image");
+        CustomButton changeImageButton = new CustomButton("Change Profile Image");
         changeImageButton.addActionListener(new ChangeImageActionListener());
         
         buttonPanel.add(changeImageButton);
@@ -87,14 +114,13 @@ public class ChildProfilePanel extends JPanel {
     
     private JPanel createProfileInfoPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
-        
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.anchor = GridBagConstraints.WEST;
         gbc.insets = new Insets(5, 0, 5, 10);
         
         // Title
         JLabel titleLabel = new JLabel("Profile Information");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD,24f));
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         panel.add(titleLabel, gbc);
         
@@ -128,14 +154,14 @@ public class ChildProfilePanel extends JPanel {
         row++;
         addProfileSection(panel, gbc, row++, "Development Records");
         row = addProfileField(panel, gbc, row, "Total Records:", currentProfile.get("development_records").toString());
-        
+        panel.setOpaque(false);
         return panel;
     }
     
     private void addProfileSection(JPanel panel, GridBagConstraints gbc, int row, String title) {
         JLabel sectionLabel = new JLabel(title);
-        sectionLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        sectionLabel.setForeground(new Color(0, 123, 255));
+        sectionLabel.setFont(sectionLabel.getFont().deriveFont(Font.BOLD, 18f));
+        sectionLabel.setForeground(AppColor.getColor("brown"));
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;
         panel.add(sectionLabel, gbc);
         gbc.gridwidth = 1;
@@ -144,12 +170,12 @@ public class ChildProfilePanel extends JPanel {
     private int addProfileField(JPanel panel, GridBagConstraints gbc, int row, String label, String value) {
         gbc.gridx = 0; gbc.gridy = row;
         JLabel fieldLabel = new JLabel(label);
-        fieldLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        fieldLabel.setFont(fieldLabel.getFont().deriveFont(Font.BOLD, 12f));
         panel.add(fieldLabel, gbc);
         
         gbc.gridx = 1;
         JLabel valueLabel = new JLabel(value != null ? value : "N/A");
-        valueLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        fieldLabel.setFont(fieldLabel.getFont().deriveFont( 12f));
         panel.add(valueLabel, gbc);
         
         return row + 1;
@@ -175,9 +201,10 @@ public class ChildProfilePanel extends JPanel {
                     
                     // Validate image size (limit to 5MB)
                     if (imageData.length > 5 * 1024 * 1024) {
-                        JOptionPane.showMessageDialog(ChildProfilePanel.this,
-                            "Image file is too large. Please select an image smaller than 5MB.",
-                            "Image Too Large", JOptionPane.WARNING_MESSAGE);
+                        CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(ChildProfilePanel.this), 
+                            "Image Too Large", "Image file is too large. Please select an image smaller than 5MB.", 
+                            CustomMessageDialog.Type.ERROR);
+
                         return;
                     }
                     
@@ -193,23 +220,22 @@ public class ChildProfilePanel extends JPanel {
                         // Update current profile data
                         currentProfile.put("profile_image", imageData);
                         
-                        JOptionPane.showMessageDialog(ChildProfilePanel.this,
-                            "Profile image updated successfully!",
-                            "Success", JOptionPane.INFORMATION_MESSAGE);
+                        CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(ChildProfilePanel.this), 
+                            "Success", "Profile image updated successfully!", 
+                            CustomMessageDialog.Type.SUCCESS);
                     } else {
-                        JOptionPane.showMessageDialog(ChildProfilePanel.this,
-                            "Failed to update profile image. Please try again.",
-                            "Error", JOptionPane.ERROR_MESSAGE);
-                    }
+                        CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(ChildProfilePanel.this), 
+                            "Error", "Failed to update profile image. Please try again.", 
+                            CustomMessageDialog.Type.ERROR);}
                     
                 } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(ChildProfilePanel.this,
-                        "Error reading image file: " + ex.getMessage(),
-                        "File Error", JOptionPane.ERROR_MESSAGE);
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(ChildProfilePanel.this), 
+                        "Error", "Error reading image file: " + ex.getMessage(), 
+                        CustomMessageDialog.Type.ERROR);
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(ChildProfilePanel.this,
-                        "An unexpected error occurred: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(ChildProfilePanel.this), 
+                        "Error", "An unexpected error occurred: " + ex.getMessage(), 
+                        CustomMessageDialog.Type.ERROR);
                 }
             }
         }

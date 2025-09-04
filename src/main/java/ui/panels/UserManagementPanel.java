@@ -19,7 +19,7 @@ public class UserManagementPanel extends JPanel {
     private DataTable userTable;
     private SearchPanel searchPanel;
     private FormBuilder formBuilder;
-    private ButtonPanel buttonPanel;
+    private ButtonPanel1 buttonPanel;
     
     // Form field IDs
     private static final String FIELD_USERNAME = "username";
@@ -48,12 +48,15 @@ public class UserManagementPanel extends JPanel {
 
     private void initializeComponents() {
         // Create search panel
+        setOpaque(false);
         searchPanel = SearchPanel.createWithClear("Search users:", this::searchUsers, this::loadUsers);
+        searchPanel.setOpaque(false);
         
         // Create data table
         String[] columnNames = {"ID", "Username", "Role", "School", "Created At"};
         userTable = new DataTable(columnNames);
         userTable.setRowSelectionHandler(this::onRowSelected);
+        userTable.setOpaque(false);
 
         // Create form builder
         formBuilder = new FormBuilder("User Information", 2);
@@ -66,7 +69,7 @@ public class UserManagementPanel extends JPanel {
         loadAvailableSchools();
 
         // Create button panel
-        buttonPanel = ButtonPanel.createCrudPanel(
+        buttonPanel = ButtonPanel1.createCrudPanel(
             e -> addUser(),
             e -> updateUser(),
             e -> deleteUser(),
@@ -87,6 +90,7 @@ public class UserManagementPanel extends JPanel {
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.add(formBuilder.build(), BorderLayout.CENTER);
         bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
+        bottomPanel.setOpaque(false);
         
         add(bottomPanel, BorderLayout.SOUTH);
     }

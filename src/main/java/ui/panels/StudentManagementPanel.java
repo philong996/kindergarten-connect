@@ -8,6 +8,9 @@ import ui.components.*;
 import util.AuthUtil;
 
 import javax.swing.*;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+
 import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -26,7 +29,7 @@ public class StudentManagementPanel extends JPanel {
     private DataTable studentTable;
     private SearchPanel searchPanel;
     private FormBuilder formBuilder;
-    private ButtonPanel buttonPanel;
+    private ButtonPanel1 buttonPanel;
     
     // Form field IDs
     private static final String FIELD_NAME = "name";
@@ -49,12 +52,17 @@ public class StudentManagementPanel extends JPanel {
     
     private void initializeComponents() {
         // Create search panel
+        setOpaque(false);
         searchPanel = SearchPanel.createWithClear("Search by name:", this::searchStudents, this::loadStudentData);
+        searchPanel.setOpaque(false);
         
         // Create data table
         String[] columnNames = {"ID", "Name", "Date of Birth", "Age", "Class", "Address"};
         studentTable = new DataTable(columnNames);
         studentTable.setRowSelectionHandler(this::onRowSelected);
+        studentTable.setOpaque(false);
+
+
         
         // Create form builder
         formBuilder = new FormBuilder("Student Information", 2);
@@ -62,12 +70,11 @@ public class StudentManagementPanel extends JPanel {
                   .addDateField(FIELD_DOB, "Date of Birth", true)
                   .addComboBox(FIELD_CLASS, "Class", new String[]{"Loading..."}, true)
                   .addTextField(FIELD_ADDRESS, "Address", false);
-        
         // Load available classes for the dropdown
         loadAvailableClasses();
         
         // Create button panel
-        buttonPanel = ButtonPanel.createCrudPanel(
+        buttonPanel = ButtonPanel1.createCrudPanel(
             e -> addStudent(),
             e -> updateStudent(), 
             e -> deleteStudent(),
@@ -77,6 +84,7 @@ public class StudentManagementPanel extends JPanel {
     
     private void setupLayout() {
         setLayout(new BorderLayout());
+        // setOpaque(false);
         
         // Top: Search panel
         add(searchPanel, BorderLayout.NORTH);
@@ -88,6 +96,7 @@ public class StudentManagementPanel extends JPanel {
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.add(formBuilder.build(), BorderLayout.CENTER);
         bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
+        bottomPanel.setOpaque(false);
         
         add(bottomPanel, BorderLayout.SOUTH);
     }

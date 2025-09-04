@@ -2,9 +2,14 @@ package ui.panels;
 
 import model.PhysicalDevelopmentRecord;
 import service.PhysicalDevelopmentService;
+import ui.components.AppColor;
+import ui.components.RoundedBorder;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+
 import java.awt.*;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
@@ -18,11 +23,13 @@ public class PhysicalDevelopmentPanel extends JPanel {
     private PhysicalDevelopmentService physicalService;
     private int studentId;
     private String studentName;
+    private boolean isBoy;
     private int teacherId; // For teacher operations
     private boolean isTeacherView;
     
     // Components
     private JLabel nameLabel;
+    private JLabel sexLabel;
     private JLabel currentHeightLabel;
     private JLabel currentWeightLabel;
     private JLabel currentBMILabel;
@@ -41,9 +48,10 @@ public class PhysicalDevelopmentPanel extends JPanel {
     private DecimalFormat df = new DecimalFormat("#.##");
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
     
-    public PhysicalDevelopmentPanel(int studentId, String studentName, int teacherId, boolean isTeacherView) {
+    public PhysicalDevelopmentPanel(int studentId, String studentName, boolean isBoy, int teacherId, boolean isTeacherView) {
         this.studentId = studentId;
         this.studentName = studentName;
+        this.isBoy = isBoy;
         this.teacherId = teacherId;
         this.isTeacherView = isTeacherView;
         this.physicalService = new PhysicalDevelopmentService();
@@ -59,21 +67,42 @@ public class PhysicalDevelopmentPanel extends JPanel {
     
     // Constructor for parent view (no teacher actions)
     public PhysicalDevelopmentPanel(int studentId, String studentName) {
-        this(studentId, studentName, -1, false);
+        this(studentId, studentName, true,  -1, false);
+    }
+
+    public PhysicalDevelopmentPanel(int studentId, String studentName, boolean isBoy) {
+        this(studentId, studentName, true, -1, false);
     }
     
     private void initializeComponents() {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder("Physical Development Tracking"));
+        setOpaque(false);
         
         // Current data labels
-        nameLabel = new JLabel(studentName, JLabel.CENTER);
-        nameLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
-        
+        nameLabel = new JLabel(studentName.toUpperCase(), JLabel.CENTER);
+        // nameLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        nameLabel.setFont(nameLabel.getFont().deriveFont(Font.BOLD, 20f));
+
+        String sexText = "Boy";
+        if (!isBoy) {
+            sexText = "Girl";
+        }
+        sexLabel = new JLabel(sexText, JLabel.CENTER);
+        sexLabel.setFont(sexLabel.getFont().deriveFont(Font.BOLD, 16f));
+
+        if (isBoy) {
+            sexLabel.setForeground(AppColor.getColor("blue")); // Blue    
+        } else {
+            sexLabel.setForeground(AppColor.getColor("lightPink")); // pink
+        }
+        ageLabel = new JLabel("", JLabel.CENTER);
+        ageLabel.setFont(ageLabel.getFont().deriveFont(Font.BOLD, 16f));
+
         currentHeightLabel = new JLabel("Height: -- cm");
         currentWeightLabel = new JLabel("Weight: -- kg");
         currentBMILabel = new JLabel("BMI: --");
-        ageLabel = new JLabel("Age: --");
+        
         lastMeasurementLabel = new JLabel("Last measured: --");
         
         heightChangeLabel = new JLabel("");
@@ -89,8 +118,29 @@ public class PhysicalDevelopmentPanel extends JPanel {
                 return false;
             }
         };
+
         historyTable = new JTable(tableModel);
+        historyTable.setRowHeight(30);
         historyTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        historyTable.setOpaque(false);
+        historyTable.setBackground(new Color(0, 0, 0, 0)); // trong suốt
+        historyTable.setShowGrid(false); 
+        JTableHeader header = historyTable.getTableHeader();
+            header.setDefaultRenderer(new TableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value,
+                                                               boolean isSelected, boolean hasFocus,
+                                                               int row, int column) {
+                    JLabel label = new JLabel(value.toString(), SwingConstants.CENTER);
+                    label.setOpaque(true);
+                    label.setBackground(AppColor.getColor("lightGraylishYellow")); // màu nền header
+                    label.setBorder(BorderFactory.createLineBorder(AppColor.getColor("darkGreen"), 2, true)); // bo tròn
+                    label.setFont(label.getFont().deriveFont(Font.BOLD));
+                    return label;
+                }
+            });;
+        // historyTable.setBackground(Color.GREEN);
+
         
         // Buttons (only for teachers)
         if (isTeacherView) {
@@ -107,38 +157,37 @@ public class PhysicalDevelopmentPanel extends JPanel {
         // Current data panel
         JPanel currentDataPanel = new JPanel(new GridBagLayout());
         currentDataPanel.setBorder(BorderFactory.createTitledBorder("Current Data"));
+        
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(3, 3, 3, 3);
         
         // Student name
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 3;
         currentDataPanel.add(nameLabel, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 3;
+        currentDataPanel.add(sexLabel, gbc);
         
-        // Current measurements
-        gbc.gridwidth = 1; gbc.anchor = GridBagConstraints.WEST;
-        gbc.gridx = 0; gbc.gridy = 1;
-        currentDataPanel.add(currentHeightLabel, gbc);
-        gbc.gridx = 1;
-        currentDataPanel.add(heightChangeLabel, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 2;
-        currentDataPanel.add(currentWeightLabel, gbc);
-        gbc.gridx = 1;
-        currentDataPanel.add(weightChangeLabel, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 3;
-        currentDataPanel.add(currentBMILabel, gbc);
-        gbc.gridx = 1;
-        currentDataPanel.add(bmiChangeLabel, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 4;
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 3;
         currentDataPanel.add(ageLabel, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 5;
+
+        gbc.gridwidth = 1; 
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.gridx = 0; gbc.gridy = 3;
+        currentDataPanel.add(createCellWithBorder(currentHeightLabel, heightChangeLabel, 200, 80), gbc);
+
+        gbc.gridx = 1; gbc.gridy = 3;
+        currentDataPanel.add(createCellWithBorder(currentWeightLabel, weightChangeLabel, 200, 80), gbc);
+
+        gbc.gridx = 2; gbc.gridy = 3;
+        currentDataPanel.add(createCellWithBorder(currentBMILabel, bmiChangeLabel,200, 80), gbc);
+
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 3;
         currentDataPanel.add(lastMeasurementLabel, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
+
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 3;
         currentDataPanel.add(growthTrendLabel, gbc);
+        currentDataPanel.setOpaque(false);
         
         add(currentDataPanel, BorderLayout.NORTH);
         
@@ -146,6 +195,9 @@ public class PhysicalDevelopmentPanel extends JPanel {
         JScrollPane tableScrollPane = new JScrollPane(historyTable);
         tableScrollPane.setBorder(BorderFactory.createTitledBorder("Measurement History"));
         tableScrollPane.setPreferredSize(new Dimension(0, 200));
+        tableScrollPane.setOpaque(false);
+        // tableScrollPane.getViewport().setOpaque(false);
+        tableScrollPane.getViewport().setBackground(AppColor.getColor("lightGraylishYellow")); // trong suốt
         add(tableScrollPane, BorderLayout.CENTER);
         
         // Button panel (only for teachers)
@@ -200,7 +252,7 @@ public class PhysicalDevelopmentPanel extends JPanel {
         currentHeightLabel.setText("Height: " + df.format(record.getHeightCm()) + " cm");
         currentWeightLabel.setText("Weight: " + df.format(record.getWeightKg()) + " kg");
         currentBMILabel.setText("BMI: " + df.format(record.getBmi()));
-        ageLabel.setText("Age: " + record.getAgeDisplay());
+        ageLabel.setText(record.getAgeDisplay());
         lastMeasurementLabel.setText("Last measured: " + record.getMeasurementDate().format(dateFormatter));
         
         // Show changes from previous measurement
@@ -211,19 +263,19 @@ public class PhysicalDevelopmentPanel extends JPanel {
         if (heightChange.compareTo(BigDecimal.ZERO) != 0) {
             String changeText = (heightChange.compareTo(BigDecimal.ZERO) > 0 ? "+" : "") + df.format(heightChange);
             heightChangeLabel.setText("(" + changeText + " cm)");
-            heightChangeLabel.setForeground(heightChange.compareTo(BigDecimal.ZERO) > 0 ? Color.GREEN : Color.RED);
+            heightChangeLabel.setForeground(heightChange.compareTo(BigDecimal.ZERO) > 0 ? AppColor.getColor("freshGreen") : AppColor.getColor("coralRed"));
         }
         
         if (weightChange.compareTo(BigDecimal.ZERO) != 0) {
             String changeText = (weightChange.compareTo(BigDecimal.ZERO) > 0 ? "+" : "") + df.format(weightChange);
             weightChangeLabel.setText("(" + changeText + " kg)");
-            weightChangeLabel.setForeground(weightChange.compareTo(BigDecimal.ZERO) > 0 ? Color.GREEN : Color.RED);
+            weightChangeLabel.setForeground(weightChange.compareTo(BigDecimal.ZERO) > 0 ? AppColor.getColor("freshGreen") : AppColor.getColor("coralRed"));
         }
         
         if (bmiChange.compareTo(BigDecimal.ZERO) != 0) {
             String changeText = (bmiChange.compareTo(BigDecimal.ZERO) > 0 ? "+" : "") + df.format(bmiChange);
             bmiChangeLabel.setText("(" + changeText + ")");
-            bmiChangeLabel.setForeground(bmiChange.compareTo(BigDecimal.ZERO) > 0 ? Color.ORANGE : Color.BLUE);
+            bmiChangeLabel.setForeground(bmiChange.compareTo(BigDecimal.ZERO) > 0 ? AppColor.getColor("freshGreen") : AppColor.getColor("coralRed"));
         }
     }
     
@@ -320,5 +372,18 @@ public class PhysicalDevelopmentPanel extends JPanel {
     
     public void refreshData() {
         loadData();
+    }
+
+    private JPanel createCellWithBorder(JLabel topLabel, JLabel bottomLabel, int width, int height) {
+        JPanel cellPanel = new JPanel(new GridLayout(2, 1, 0, 5)); // 2 dòng
+        cellPanel.setPreferredSize(new Dimension(width, height));
+        cellPanel.setOpaque(false);
+        cellPanel.add(topLabel);
+        cellPanel.add(bottomLabel);
+        cellPanel.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(15, AppColor.getColor("greenBlue"), 3),            
+            BorderFactory.createEmptyBorder(10, 10, 10, 10) 
+        ));
+        return cellPanel;
     }
 }

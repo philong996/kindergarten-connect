@@ -36,12 +36,12 @@ public class SearchPanel extends JPanel {
         clearButton = new JButton("Clear");
         
         // Style the components
-        searchField.setFont(new Font("Arial", Font.PLAIN, 12));
-        searchButton.setFont(new Font("Arial", Font.PLAIN, 12));
-        clearButton.setFont(new Font("Arial", Font.PLAIN, 12));
+        // searchField.setFont(new Font("Arial", Font.PLAIN, 12));
+        // searchButton.setFont(new Font("Arial", Font.PLAIN, 12));
+        // clearButton.setFont(new Font("Arial", Font.PLAIN, 12));
         
         searchButton.setPreferredSize(new Dimension(80, 25));
-        clearButton.setPreferredSize(new Dimension(70, 25));
+        clearButton.setPreferredSize(new Dimension(80, 25));
     }
     
     private void setupLayout() {

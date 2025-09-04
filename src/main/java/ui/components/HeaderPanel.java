@@ -28,12 +28,13 @@ public class HeaderPanel extends JPanel {
     
     private void initializeComponents(String title, String userInfo, String status) {
 
-        ImageIcon logoIcon = new ImageIcon("src/main/resources/images/logo.png");
+        ImageIcon logoIcon = new ImageIcon("src/main/resources/images/logo2.png");
         Image img = logoIcon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
         ImageIcon scaledIcon = new ImageIcon(img);
 
         // Tạo titleLabel với icon + text
         titleLabel = new JLabel(title, scaledIcon, SwingConstants.LEFT);
+        titleLabel.setIconTextGap(10); //
         titleLabel.setFont(titleLabel.getFont().deriveFont(24f));
         titleLabel.setForeground(Color.WHITE);
         
@@ -185,7 +186,8 @@ public class HeaderPanel extends JPanel {
      * Create a dashboard header with role-based styling
      */
     public static HeaderPanel createDashboard(String role, String username) {
-        String title = role + " Dashboard";
+        // String title = role + " Dashboard";
+        String title = "BÉ NGOAN KMS";
         String userInfo = "Welcome " + role + " - " + username;
         
         HeaderPanel header = new HeaderPanel(title, userInfo);
@@ -193,16 +195,16 @@ public class HeaderPanel extends JPanel {
         // Set role-specific colors
         switch (role.toUpperCase()) {
             case "PRINCIPAL":
-                header.setHeaderColor(AppColor.getColor("pinkOrange")); // Purple
+                header.setHeaderColor(AppColor.getColor("yellowOrange"));
                 break;
             case "TEACHER":
-                header.setHeaderColor(AppColor.getColor("green")); // Green
+                header.setHeaderColor(AppColor.getColor("darkGreen")); // Green
                 break;
             case "PARENT":
-                header.setHeaderColor(AppColor.getColor("yellowOrange")); // Orange
+                header.setHeaderColor(AppColor.getColor("greenBlue")); // Orange
                 break;
             default:
-                header.setHeaderColor(AppColor.getColor("cream")); // Default blue
+                header.setHeaderColor(AppColor.getColor("lightCream")); // Default
                 break;
         }
         
