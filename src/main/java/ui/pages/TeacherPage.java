@@ -243,8 +243,10 @@ public class TeacherPage extends BaseAuthenticatedPage {
             physicalPanel.setBorder(BorderFactory.createTitledBorder("Physical Development"));
             
             // Create physical development panel
+            // Get gender from student data - convert from MALE/FEMALE to boolean (true for boy)
+            boolean isBoy = student.isMale(); // Use the new helper method
             PhysicalDevelopmentPanel physicalDevPanel = new PhysicalDevelopmentPanel(
-                studentId, studentName, authService.getCurrentUser().getId(), true
+                studentId, studentName, isBoy, authService.getCurrentUser().getId(), true
             );
             // System.out.println("Physical development panel created for student: " + studentName);
             physicalPanel.add(physicalDevPanel, BorderLayout.CENTER);

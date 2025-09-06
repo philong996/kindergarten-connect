@@ -257,10 +257,9 @@ public class ParentPage extends BaseAuthenticatedPage {
             childDevPanel.removeAll();
             
             // Create new PhysicalDevelopmentPanel for the selected child
-
-            
+            boolean isBoy = selectedChild.isMale(); // Use the new helper method
             PhysicalDevelopmentPanel physicalPanel = new PhysicalDevelopmentPanel(
-                selectedChild.getId(), selectedChild.getName(), true
+                selectedChild.getId(), selectedChild.getName(), isBoy
             );
             
             // Add header info about selected child

@@ -10,6 +10,7 @@ public class Student {
     private int id;
     private String name;
     private LocalDate dob;
+    private String gender; // MALE or FEMALE
     private int classId;
     private String address;
     private LocalDateTime createdAt;
@@ -21,17 +22,19 @@ public class Student {
     // Constructors
     public Student() {}
     
-    public Student(String name, LocalDate dob, int classId, String address) {
+    public Student(String name, LocalDate dob, String gender, int classId, String address) {
         this.name = name;
         this.dob = dob;
+        this.gender = gender;
         this.classId = classId;
         this.address = address;
     }
     
-    public Student(int id, String name, LocalDate dob, int classId, String address, LocalDateTime createdAt) {
+    public Student(int id, String name, LocalDate dob, String gender, int classId, String address, LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.dob = dob;
+        this.gender = gender;
         this.classId = classId;
         this.address = address;
         this.createdAt = createdAt;
@@ -46,6 +49,9 @@ public class Student {
     
     public LocalDate getDob() { return dob; }
     public void setDob(LocalDate dob) { this.dob = dob; }
+    
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
     
     public int getClassId() { return classId; }
     public void setClassId(int classId) { this.classId = classId; }
@@ -68,6 +74,15 @@ public class Student {
             return LocalDate.now().getYear() - dob.getYear();
         }
         return 0;
+    }
+    
+    // Helper method to check gender
+    public boolean isMale() {
+        return "MALE".equals(gender);
+    }
+    
+    public boolean isFemale() {
+        return "FEMALE".equals(gender);
     }
     
     @Override

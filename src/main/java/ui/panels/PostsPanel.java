@@ -10,9 +10,16 @@ import ui.components.*;
 import util.AuthUtil;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -45,8 +52,11 @@ public class PostsPanel extends JPanel {
     private static final String FIELD_VISIBILITY = "visibility";
     private static final String FIELD_SCHEDULED_DATE = "scheduled_date";
     private static final String FIELD_EVENT_DATE = "event_date";
+    private static final String FIELD_IMAGE = "image";
     
     // Selected items
+    private byte[] selectedImageData;
+    private String selectedImageFilename;
     
     public PostsPanel(int currentUserId, String currentUserRole, AuthService authService) {
         this.currentUserId = currentUserId;
@@ -271,10 +281,14 @@ public class PostsPanel extends JPanel {
         ));
         card.setBackground(Color.WHITE);
         
+        // Dynamic card sizing based on content
+        boolean hasImage = post.getPhotoAttachment() != null && post.getPhotoAttachment().length > 0;
+        int baseHeight = hasImage ? 500 : 250; // Larger height for posts with images
+        
         // Set preferred and maximum size for proper display
-        card.setPreferredSize(new Dimension(600, 350)); // Minimum card size
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 500)); // Maximum height
-        card.setMinimumSize(new Dimension(400, 250)); // Minimum size
+        card.setPreferredSize(new Dimension(600, baseHeight));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, hasImage ? 800 : 400)); // Much larger max for images
+        card.setMinimumSize(new Dimension(400, baseHeight));
         
         // Header with title and metadata
         JPanel headerPanel = createPostHeader(post);
@@ -342,6 +356,12 @@ public class PostsPanel extends JPanel {
         JPanel content = new JPanel(new BorderLayout());
         content.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
         
+        // Check if post has image for layout decisions
+        boolean hasImage = post.getPhotoAttachment() != null && post.getPhotoAttachment().length > 0;
+        
+        // Main content panel to hold text and potentially image
+        JPanel mainContent = new JPanel(new BorderLayout());
+        
         // Main content with proper text wrapping
         JTextArea contentArea = new JTextArea(post.getContent());
         contentArea.setEditable(false);
@@ -351,9 +371,14 @@ public class PostsPanel extends JPanel {
         contentArea.setFont(contentArea.getFont().deriveFont(14f)); // Slightly larger font
         contentArea.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         
-        // Set preferred size for content area
-        contentArea.setPreferredSize(new Dimension(500, 60));
-        contentArea.setRows(3); // Minimum 3 rows
+        // Adjust text area size based on image presence
+        if (hasImage) {
+            contentArea.setPreferredSize(new Dimension(500, 40)); // Smaller for posts with images
+            contentArea.setRows(2);
+        } else {
+            contentArea.setPreferredSize(new Dimension(500, 60));
+            contentArea.setRows(3);
+        }
         
         // Wrap in scroll pane if content is long
         JScrollPane contentScrollPane = new JScrollPane(contentArea);
@@ -362,9 +387,19 @@ public class PostsPanel extends JPanel {
         contentScrollPane.setBorder(null);
         contentScrollPane.setOpaque(false);
         contentScrollPane.getViewport().setOpaque(false);
-        contentScrollPane.setPreferredSize(new Dimension(500, 80));
+        contentScrollPane.setPreferredSize(new Dimension(500, hasImage ? 60 : 80));
         
-        content.add(contentScrollPane, BorderLayout.CENTER);
+        mainContent.add(contentScrollPane, BorderLayout.NORTH);
+        
+        // Add image if present
+        if (hasImage) {
+            JPanel imagePanel = createImagePanel(post.getPhotoAttachment());
+            if (imagePanel != null) {
+                mainContent.add(imagePanel, BorderLayout.CENTER);
+            }
+        }
+        
+        content.add(mainContent, BorderLayout.CENTER);
         
         // Metadata row with better spacing
         JPanel metaRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
@@ -395,6 +430,62 @@ public class PostsPanel extends JPanel {
         content.add(metaRow, BorderLayout.SOUTH);
         
         return content;
+    }
+    
+    /**
+     * Create an image panel from byte array data
+     */
+    private JPanel createImagePanel(byte[] imageData) {
+        try {
+            // Convert byte array to image
+            ByteArrayInputStream bis = new ByteArrayInputStream(imageData);
+            BufferedImage image = ImageIO.read(bis);
+            if (image == null) {
+                return null;
+            }
+            
+            // Scale image if it's too large
+            int maxWidth = 400;
+            int maxHeight = 300;
+            
+            int originalWidth = image.getWidth();
+            int originalHeight = image.getHeight();
+            
+            // Calculate scaling
+            double scaleX = (double) maxWidth / originalWidth;
+            double scaleY = (double) maxHeight / originalHeight;
+            double scale = Math.min(scaleX, scaleY);
+            
+            int scaledWidth = (int) (originalWidth * scale);
+            int scaledHeight = (int) (originalHeight * scale);
+            
+            // Create scaled image
+            Image scaledImage = image.getScaledInstance(scaledWidth, scaledHeight, Image.SCALE_SMOOTH);
+            
+            // Create panel with image
+            JPanel imagePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+            imagePanel.setOpaque(true);
+            imagePanel.setBackground(Color.WHITE);
+            imagePanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+            
+            JLabel imageLabel = new JLabel(new ImageIcon(scaledImage));
+            imageLabel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1));
+            
+            imagePanel.add(imageLabel);
+            
+            // Set explicit size to ensure visibility
+            imagePanel.setPreferredSize(new Dimension(scaledWidth + 20, scaledHeight + 20));
+            imagePanel.setMinimumSize(new Dimension(scaledWidth + 20, scaledHeight + 20));
+            
+            return imagePanel;
+            
+        } catch (IOException e) {
+            System.err.println("Error displaying image: " + e.getMessage());
+            return null;
+        } catch (Exception e) {
+            System.err.println("Unexpected error in createImagePanel: " + e.getMessage());
+            return null;
+        }
     }
     
     private JLabel createMetaLabel(String text, Color backgroundColor) {
@@ -623,6 +714,9 @@ public class PostsPanel extends JPanel {
         formBuilder.addTextField(FIELD_TITLE, "Title", true)
                   .addTextArea(FIELD_CONTENT, "Content", 4, true);
         
+        // Add image upload field
+        addImageUploadField(formBuilder);
+        
         // Add form fields based on post type
         if (Post.TYPE_CLASS_ACTIVITY.equals(postType)) {
             formBuilder.addComboBox(FIELD_CLASS, "Class", new String[]{"Loading..."}, true);
@@ -639,6 +733,76 @@ public class PostsPanel extends JPanel {
                   .addDateField(FIELD_SCHEDULED_DATE, "Scheduled Date (optional)", false);
         
         return formBuilder;
+    }
+    
+    /**
+     * Add image upload field to the form builder
+     */
+    private void addImageUploadField(FormBuilder formBuilder) {
+        // Create a panel for image selection
+        JPanel imagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton selectImageButton = new JButton("📷 Select Image");
+        JLabel imageStatusLabel = new JLabel("No image selected");
+        imageStatusLabel.setForeground(Color.GRAY);
+        
+        // Clear previous image selection when creating new form
+        selectedImageData = null;
+        selectedImageFilename = null;
+        
+        selectImageButton.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            
+            // Set file filter for images
+            FileNameExtensionFilter filter = new FileNameExtensionFilter(
+                "Image files", "jpg", "jpeg", "png", "gif", "bmp");
+            fileChooser.setFileFilter(filter);
+            fileChooser.setAcceptAllFileFilterUsed(false);
+            
+            int result = fileChooser.showOpenDialog(this);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File selectedFile = fileChooser.getSelectedFile();
+                try {
+                    // Read and store image data
+                    BufferedImage image = ImageIO.read(selectedFile);
+                    if (image == null) {
+                        DialogFactory.showError(this, "Invalid image file.");
+                        return;
+                    }
+                    
+                    // Convert to byte array
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    String fileName = selectedFile.getName();
+                    String extension = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+                    
+                    // Ensure we use a supported format
+                    if (!extension.equals("png") && !extension.equals("jpg") && !extension.equals("jpeg")) {
+                        extension = "png"; // Default to PNG
+                    }
+                    
+                    ImageIO.write(image, extension, baos);
+                    selectedImageData = baos.toByteArray();
+                    selectedImageFilename = fileName;
+                    
+                    // Update status label
+                    imageStatusLabel.setText("Selected: " + fileName);
+                    imageStatusLabel.setForeground(Color.BLUE);
+                    
+                } catch (IOException ex) {
+                    DialogFactory.showError(this, "Error reading image file: " + ex.getMessage());
+                    selectedImageData = null;
+                    selectedImageFilename = null;
+                    imageStatusLabel.setText("Error loading image");
+                    imageStatusLabel.setForeground(Color.RED);
+                }
+            }
+        });
+        
+        imagePanel.add(selectImageButton);
+        imagePanel.add(imageStatusLabel);
+        
+        // Add as a custom field to the form builder
+        formBuilder.addCustomField(FIELD_IMAGE, "Post Image (optional)", imagePanel, false);
     }
     
     /**
@@ -736,6 +900,12 @@ public class PostsPanel extends JPanel {
             } catch (DateTimeParseException e) {
                 throw new Exception("Invalid scheduled date format. Please use YYYY-MM-DD format.");
             }
+        }
+        
+        // Handle image attachment
+        if (selectedImageData != null && selectedImageData.length > 0) {
+            post.setPhotoAttachment(selectedImageData);
+            post.setPhotoFilename(selectedImageFilename != null ? selectedImageFilename : "post_image.jpg");
         }
         
         return post;

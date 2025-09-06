@@ -2,7 +2,9 @@ package ui.panels;
 
 import service.UserService;
 import service.AuthService;
+import service.StudentService;
 import model.User;
+import model.Student;
 import ui.components.*;
 
 import javax.swing.*;
@@ -14,6 +16,7 @@ import java.util.List;
  */
 public class UserManagementPanel extends JPanel {
     private UserService userService;
+    private StudentService studentService;
     
     // UI Components using the new component library
     private DataTable userTable;
@@ -28,9 +31,15 @@ public class UserManagementPanel extends JPanel {
     private static final String FIELD_SCHOOL_ID = "schoolId";
     
     private User selectedUser;
+    private JPanel studentFieldPanel; // Panel to show/hide student selection for parents
+    private JComboBox<String> studentComboBox; // Dropdown for selecting students
+    private JLabel selectedStudentLabel;
+    private Student selectedStudent; // Currently selected student for linking
+    private List<Student> availableStudents; // List of students that can be assigned
 
     public UserManagementPanel(AuthService authService) {
         this.userService = new UserService();
+        this.studentService = new StudentService();
         
         initializeComponents();
         setupLayout();
@@ -44,10 +53,11 @@ public class UserManagementPanel extends JPanel {
     public void refreshData() {
         loadUsers();
         loadAvailableSchools();
+        loadAvailableStudents();
     }
 
     private void initializeComponents() {
-        // Create search panel
+        // Make this panel transparent
         setOpaque(false);
         searchPanel = SearchPanel.createWithClear("Search users:", this::searchUsers, this::loadUsers);
         searchPanel.setOpaque(false);
@@ -65,6 +75,17 @@ public class UserManagementPanel extends JPanel {
                   .addComboBox(FIELD_ROLE, "Role", new String[]{"TEACHER", "PARENT"}, true)
                   .addComboBox(FIELD_SCHOOL_ID, "School", new String[]{"Loading..."}, true);
         
+        // Add role change listener to show/hide student search
+        FormField roleField = formBuilder.getField(FIELD_ROLE);
+        if (roleField != null && roleField.getInputComponent() instanceof JComboBox) {
+            @SuppressWarnings("unchecked")
+            JComboBox<String> roleCombo = (JComboBox<String>) roleField.getInputComponent();
+            roleCombo.addActionListener(e -> updateStudentFieldVisibility());
+        }
+        
+        // Create student search panel (initially hidden)
+        createStudentSearchPanel();
+        
         // Load available schools
         loadAvailableSchools();
 
@@ -75,6 +96,113 @@ public class UserManagementPanel extends JPanel {
             e -> deleteUser(),
             e -> clearForm()
         );
+    }
+    
+    private void createStudentSearchPanel() {
+        studentFieldPanel = new JPanel(new GridBagLayout());
+        studentFieldPanel.setBorder(BorderFactory.createTitledBorder("Student Assignment (for Parents)"));
+        studentFieldPanel.setOpaque(false);
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.anchor = GridBagConstraints.WEST;
+        
+        // Student selection label
+        JLabel selectLabel = new JLabel("Select Student:");
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        studentFieldPanel.add(selectLabel, gbc);
+        
+        // Student dropdown
+        studentComboBox = new JComboBox<>();
+        studentComboBox.addItem("-- Select a student --");
+        studentComboBox.addActionListener(e -> onStudentSelected());
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        studentFieldPanel.add(studentComboBox, gbc);
+        
+        // Selected student info label
+        selectedStudentLabel = new JLabel("No student selected");
+        selectedStudentLabel.setForeground(Color.GRAY);
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        studentFieldPanel.add(selectedStudentLabel, gbc);
+        
+        // Initially hide the panel
+        studentFieldPanel.setVisible(false);
+        
+        // Load available students
+        loadAvailableStudents();
+    }
+    
+    private void onStudentSelected() {
+        int selectedIndex = studentComboBox.getSelectedIndex();
+        if (selectedIndex <= 0 || availableStudents == null || selectedIndex > availableStudents.size()) {
+            // No selection or invalid selection
+            selectedStudent = null;
+            selectedStudentLabel.setText("No student selected");
+            selectedStudentLabel.setForeground(Color.GRAY);
+        } else {
+            // Valid selection (index - 1 because first item is "-- Select a student --")
+            selectedStudent = availableStudents.get(selectedIndex - 1);
+            selectedStudentLabel.setText("Selected: " + selectedStudent.getName() + 
+                " (ID: " + selectedStudent.getId() + ", Class: " + selectedStudent.getClassName() + ")");
+            selectedStudentLabel.setForeground(Color.BLUE);
+        }
+    }
+    
+    private void loadAvailableStudents() {
+        try {
+            // Get all students who don't have parent assignments yet
+            availableStudents = studentService.getStudentsWithoutParents();
+            
+            // Clear and populate combo box
+            studentComboBox.removeAllItems();
+            studentComboBox.addItem("-- Select a student --");
+            
+            if (availableStudents != null) {
+                for (Student student : availableStudents) {
+                    String displayText = student.getName() + " (ID: " + student.getId();
+                    if (student.getClassName() != null) {
+                        displayText += ", Class: " + student.getClassName();
+                    }
+                    displayText += ")";
+                    studentComboBox.addItem(displayText);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading available students: " + e.getMessage());
+            // Add a default message
+            studentComboBox.removeAllItems();
+            studentComboBox.addItem("Error loading students");
+        }
+    }
+    
+    private void updateStudentFieldVisibility() {
+        FormField roleField = formBuilder.getField(FIELD_ROLE);
+        if (roleField != null && roleField.getInputComponent() instanceof JComboBox) {
+            @SuppressWarnings("unchecked")
+            JComboBox<String> roleCombo = (JComboBox<String>) roleField.getInputComponent();
+            String selectedRole = (String) roleCombo.getSelectedItem();
+            boolean showStudentField = "PARENT".equals(selectedRole);
+            
+            studentFieldPanel.setVisible(showStudentField);
+            if (!showStudentField) {
+                // Clear student selection when not showing
+                selectedStudent = null;
+                selectedStudentLabel.setText("No student selected");
+                if (studentComboBox != null) {
+                    studentComboBox.setSelectedIndex(0);
+                }
+            }
+            
+            // Refresh layout
+            revalidate();
+            repaint();
+        }
     }
 
     private void setupLayout() {
@@ -88,7 +216,14 @@ public class UserManagementPanel extends JPanel {
 
         // Bottom: Form and buttons
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.add(formBuilder.build(), BorderLayout.CENTER);
+        
+        // Create a panel that contains both the main form and student search
+        JPanel formPanel = new JPanel(new BorderLayout());
+        formPanel.add(formBuilder.build(), BorderLayout.NORTH);
+        formPanel.add(studentFieldPanel, BorderLayout.CENTER);
+        formPanel.setOpaque(false);
+        
+        bottomPanel.add(formPanel, BorderLayout.CENTER);
         bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
         bottomPanel.setOpaque(false);
         
@@ -186,13 +321,34 @@ public class UserManagementPanel extends JPanel {
         try {
             User user = createUserFromForm();
             
-            boolean success = userService.createUser(user);
+            boolean success;
+            if ("PARENT".equals(user.getRole())) {
+                // Check if a student is selected
+                if (selectedStudent == null) {
+                    DialogFactory.showError(this, "Please search and select a student for the parent.");
+                    return;
+                }
+                
+                // Create parent user with student link
+                success = userService.createParentUserWithStudent(user, selectedStudent.getId());
+                if (success) {
+                    DialogFactory.showSuccess(this, "Parent user created and linked to student: " + selectedStudent.getName());
+                } else {
+                    DialogFactory.showError(this, "Failed to create parent user or link to student.");
+                }
+            } else {
+                // Create regular user (teacher)
+                success = userService.createUser(user);
+                if (success) {
+                    DialogFactory.showSuccess(this, "User added successfully!");
+                } else {
+                    DialogFactory.showError(this, "Failed to add user. Username might already exist.");
+                }
+            }
+            
             if (success) {
-                DialogFactory.showSuccess(this, "User added successfully!");
                 loadUsers();
                 clearForm();
-            } else {
-                DialogFactory.showError(this, "Failed to add user. Username might already exist.");
             }
         } catch (Exception e) {
             DialogFactory.showError(this, "Error adding user: " + e.getMessage());
@@ -265,6 +421,20 @@ public class UserManagementPanel extends JPanel {
                 comboBox.setSelectedIndex(0);
             }
         }
+        
+        // Clear student selection
+        selectedStudent = null;
+        if (studentComboBox != null) {
+            studentComboBox.setSelectedIndex(0);
+        }
+        if (selectedStudentLabel != null) {
+            selectedStudentLabel.setText("No student selected");
+            selectedStudentLabel.setForeground(Color.GRAY);
+        }
+        
+        // Hide student field panel
+        updateStudentFieldVisibility();
+        
         selectedUser = null;
         userTable.clearSelection();
         buttonPanel.setButtonEnabled("Update", false);

@@ -34,6 +34,7 @@ public class StudentManagementPanel extends JPanel {
     // Form field IDs
     private static final String FIELD_NAME = "name";
     private static final String FIELD_DOB = "dob";
+    private static final String FIELD_GENDER = "gender";
     private static final String FIELD_ADDRESS = "address";
     private static final String FIELD_CLASS = "class";
     
@@ -68,6 +69,7 @@ public class StudentManagementPanel extends JPanel {
         formBuilder = new FormBuilder("Student Information", 2);
         formBuilder.addTextField(FIELD_NAME, "Name", true)
                   .addDateField(FIELD_DOB, "Date of Birth", true)
+                  .addComboBox(FIELD_GENDER, "Gender", new String[]{"MALE", "FEMALE"}, true)
                   .addComboBox(FIELD_CLASS, "Class", new String[]{"Loading..."}, true)
                   .addTextField(FIELD_ADDRESS, "Address", false);
         // Load available classes for the dropdown
@@ -112,7 +114,7 @@ public class StudentManagementPanel extends JPanel {
         if (!canManageStudents) {
             // Show tooltip explaining restrictions
             String tooltip = "You don't have permission to edit student information";
-            for (String fieldId : new String[]{FIELD_NAME, FIELD_DOB, FIELD_ADDRESS, FIELD_CLASS}) {
+            for (String fieldId : new String[]{FIELD_NAME, FIELD_DOB, FIELD_GENDER, FIELD_ADDRESS, FIELD_CLASS}) {
                 FormField field = formBuilder.getField(fieldId);
                 if (field != null) {
                     field.setFieldToolTip(tooltip);
@@ -183,6 +185,7 @@ public class StudentManagementPanel extends JPanel {
         if (selectedStudent != null) {
             formBuilder.setValue(FIELD_NAME, selectedStudent.getName());
             formBuilder.setValue(FIELD_DOB, selectedStudent.getDob().toString());
+            formBuilder.setValue(FIELD_GENDER, selectedStudent.getGender() != null ? selectedStudent.getGender() : "MALE");
             
             // Set class selection by finding the matching class
             try {
@@ -310,6 +313,7 @@ public class StudentManagementPanel extends JPanel {
     private Student createStudentFromForm() throws Exception {
         String name = formBuilder.getValue(FIELD_NAME).trim();
         String dobStr = formBuilder.getValue(FIELD_DOB).trim();
+        String gender = formBuilder.getValue(FIELD_GENDER).trim();
         String address = formBuilder.getValue(FIELD_ADDRESS).trim();
         String classSelection = formBuilder.getValue(FIELD_CLASS).trim();
         
@@ -330,6 +334,7 @@ public class StudentManagementPanel extends JPanel {
         Student student = new Student();
         student.setName(name);
         student.setDob(dob);
+        student.setGender(gender);
         student.setAddress(address);
         student.setClassId(classId);
         

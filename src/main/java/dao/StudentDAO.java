@@ -18,21 +18,22 @@ public class StudentDAO {
      * Create new student
      */
     public boolean create(Student student) {
-        String sql = "INSERT INTO students (name, dob, class_id, address, profile_image) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO students (name, dob, gender, class_id, address, profile_image) VALUES (?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setString(1, student.getName());
             stmt.setDate(2, Date.valueOf(student.getDob()));
-            stmt.setInt(3, student.getClassId());
-            stmt.setString(4, student.getAddress());
+            stmt.setString(3, student.getGender() != null ? student.getGender() : "MALE");
+            stmt.setInt(4, student.getClassId());
+            stmt.setString(5, student.getAddress());
             
             // Handle profile image
             if (student.getProfileImage() != null) {
-                stmt.setBytes(5, student.getProfileImage());
+                stmt.setBytes(6, student.getProfileImage());
             } else {
-                stmt.setNull(5, java.sql.Types.BINARY);
+                stmt.setNull(6, java.sql.Types.BINARY);
             }
             
             int rowsAffected = stmt.executeUpdate();
@@ -141,24 +142,25 @@ public class StudentDAO {
      * Update student
      */
     public boolean update(Student student) {
-        String sql = "UPDATE students SET name = ?, dob = ?, class_id = ?, address = ?, profile_image = ? WHERE id = ?";
+        String sql = "UPDATE students SET name = ?, dob = ?, gender = ?, class_id = ?, address = ?, profile_image = ? WHERE id = ?";
         
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setString(1, student.getName());
             stmt.setDate(2, Date.valueOf(student.getDob()));
-            stmt.setInt(3, student.getClassId());
-            stmt.setString(4, student.getAddress());
+            stmt.setString(3, student.getGender() != null ? student.getGender() : "MALE");
+            stmt.setInt(4, student.getClassId());
+            stmt.setString(5, student.getAddress());
             
             // Handle profile image
             if (student.getProfileImage() != null) {
-                stmt.setBytes(5, student.getProfileImage());
+                stmt.setBytes(6, student.getProfileImage());
             } else {
-                stmt.setNull(5, java.sql.Types.BINARY);
+                stmt.setNull(6, java.sql.Types.BINARY);
             }
             
-            stmt.setInt(6, student.getId());
+            stmt.setInt(7, student.getId());
             
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
@@ -237,6 +239,33 @@ public class StudentDAO {
     }
     
     /**
+     * Find students who don't have parent assignments yet
+     */
+    public List<Student> findStudentsWithoutParents() {
+        List<Student> students = new ArrayList<>();
+        String sql = """
+            SELECT s.*, c.name as class_name 
+            FROM students s 
+            LEFT JOIN classes c ON s.class_id = c.id 
+            LEFT JOIN parents p ON s.id = p.student_id 
+            WHERE p.student_id IS NULL 
+            ORDER BY s.name
+            """;
+        
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                students.add(mapResultSetToStudent(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error finding students without parents: " + e.getMessage());
+        }
+        return students;
+    }
+    
+    /**
      * Helper method to map ResultSet to Student object
      */
     private Student mapResultSetToStudent(ResultSet rs) throws SQLException {
@@ -249,6 +278,7 @@ public class StudentDAO {
             student.setDob(dob.toLocalDate());
         }
         
+        student.setGender(rs.getString("gender"));
         student.setClassId(rs.getInt("class_id"));
         student.setAddress(rs.getString("address"));
         student.setProfileImage(rs.getBytes("profile_image"));

@@ -63,6 +63,47 @@ public class UserService {
     }
     
     /**
+     * Create a new parent user and link them to a student
+     */
+    public boolean createParentUserWithStudent(User user, int studentId) throws SQLException {
+        // Validate that this is a parent user
+        if (!"PARENT".equals(user.getRole())) {
+            throw new IllegalArgumentException("This method is only for creating parent users");
+        }
+        
+        // Create the user first
+        boolean userCreated = createUser(user);
+        if (!userCreated) {
+            return false;
+        }
+        
+        // Get the created user to get the ID
+        User createdUser = userDAO.findByUsername(user.getUsername());
+        if (createdUser == null) {
+            return false;
+        }
+        
+        // Link the parent to the student
+        boolean relationshipCreated = parentDAO.addParentStudentRelationship(
+            createdUser.getId(), 
+            studentId, 
+            "Parent"
+        );
+        
+        return relationshipCreated;
+    }
+    
+    /**
+     * Update parent-student relationship (for principals to manage)
+     */
+    public boolean updateParentStudentRelationship(int parentUserId, int newStudentId) throws SQLException {
+        // Remove existing relationships for this parent (assuming one parent - one child)
+        // This would need a method to get existing relationships first
+        // For now, just add the new relationship
+        return parentDAO.addParentStudentRelationship(parentUserId, newStudentId, "Parent");
+    }
+    
+    /**
      * Update an existing user with role validation
      * Note: Role changes are not allowed for security reasons
      */

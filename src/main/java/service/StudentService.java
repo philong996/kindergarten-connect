@@ -89,6 +89,13 @@ public class StudentService {
     }
     
     /**
+     * Get students who don't have parent assignments yet
+     */
+    public List<Student> getStudentsWithoutParents() {
+        return studentDAO.findStudentsWithoutParents();
+    }
+    
+    /**
      * Get student count for a class
      */
     public int getStudentCount(int classId) {

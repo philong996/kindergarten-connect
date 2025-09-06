@@ -108,9 +108,18 @@ public class FormBuilder {
      * Add a number field
      */
     public FormBuilder addNumberField(String id, String label, boolean required) {
-        JTextField numberField = new JTextField(20);
-        numberField.setToolTipText("Enter numbers only");
-        FormField formField = new FormField(label, numberField, required);
+        JTextField textField = new JTextField();
+        FormField formField = new FormField(label, textField, required);
+        formFields.add(formField);
+        fieldMap.put(id, formField);
+        return this;
+    }
+    
+    /**
+     * Add a custom component field
+     */
+    public FormBuilder addCustomField(String id, String label, JComponent component, boolean required) {
+        FormField formField = new FormField(label, component, required);
         formFields.add(formField);
         fieldMap.put(id, formField);
         return this;
