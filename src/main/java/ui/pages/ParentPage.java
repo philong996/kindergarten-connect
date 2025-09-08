@@ -281,7 +281,7 @@ public class ParentPage extends BaseAuthenticatedPage {
             headerPanel.add(new JLabel("Attendance history for: " + selectedChild.getName() + 
                                      " (" + (selectedChild.getClassName() != null ? selectedChild.getClassName() : "Class ID: " + selectedChild.getClassId()) + ")"));
             
-            attendanceHistoryPanel.add(headerPanel, BorderLayout.NORTH);
+            // attendanceHistoryPanel.add(headerPanel, BorderLayout.NORTH);
             attendanceHistoryPanel.add(historyPanel, BorderLayout.CENTER);
             
             attendanceHistoryPanel.revalidate();

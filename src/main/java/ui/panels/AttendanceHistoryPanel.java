@@ -196,11 +196,15 @@ public class AttendanceHistoryPanel extends JPanel {
         gbc.insets = new Insets(5, 5, 5, 5);
         
         // Student selection
-        gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
-        searchPanel.add(new JLabel("Student:"), gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
-        gbc.gridwidth = 3;
-        searchPanel.add(studentCombo, gbc);
+        
+        if ("TEACHER".equals(role)) {
+            gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
+            searchPanel.add(new JLabel("Student:"), gbc);
+            gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+            gbc.gridwidth = 3;
+            searchPanel.add(studentCombo, gbc);
+        }
+        
         
         // Date range
         gbc.gridwidth = 1;
