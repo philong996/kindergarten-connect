@@ -3,6 +3,11 @@ package util;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+
+import ui.components.AppColor;
+import ui.components.CustomButton;
+import ui.components.CustomButton.accountType;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -61,7 +66,7 @@ public class CameraUtil {
         
         // Set text
         g2d.setColor(Color.BLACK);
-        g2d.setFont(new Font("Arial", Font.BOLD, 16));
+        g2d.setFont(new Font("Comic Sans MS", Font.BOLD, 16));
         FontMetrics fm = g2d.getFontMetrics();
         int x = (200 - fm.stringWidth(text)) / 2;
         int y = (150 + fm.getAscent()) / 2;
@@ -89,12 +94,17 @@ public class CameraUtil {
         
         private void initComponents() {
             setLayout(new BorderLayout());
+            setBackground(AppColor.getColor("lightViolet"));
             
             // Header
             JPanel headerPanel = new JPanel();
-            headerPanel.setBackground(new Color(70, 130, 180));
-            JLabel headerLabel = new JLabel("📷 Choose Photo Capture Method", JLabel.CENTER);
-            headerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+            headerPanel.setBackground(AppColor.getColor("darkViolet"));
+
+            ImageIcon photoIcon = new ImageIcon("src/main/resources/images/camera.png");
+            Image imgPhoto = photoIcon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
+            ImageIcon scaledPhotoIcon = new ImageIcon(imgPhoto);
+            JLabel headerLabel = new JLabel("Choose Photo Capture Method", scaledPhotoIcon, JLabel.CENTER);
+            headerLabel.setFont(new Font("Comic Sans MS", Font.BOLD, 18));
             headerLabel.setForeground(Color.WHITE);
             headerLabel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
             headerPanel.add(headerLabel);
@@ -102,34 +112,55 @@ public class CameraUtil {
             
             // Main options panel
             JPanel optionsPanel = new JPanel(new GridBagLayout());
+            optionsPanel.setBackground(AppColor.getColor("lightViolet"));   
             optionsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.insets = new Insets(10, 10, 10, 10);
             gbc.fill = GridBagConstraints.HORIZONTAL;
             
             // Option 1: Select existing photo file
-            JButton selectFileButton = createOptionButton(
-                "📁 Select Photo File", 
-                "Choose an existing photo from your computer",
-                new Color(46, 125, 50)
-            );
+            // Tạo icon và resize
+            ImageIcon folderIcon = new ImageIcon("src/main/resources/images/folder.png");
+            Image scaled = folderIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
+            ImageIcon scaledIcon = new ImageIcon(scaled);
+            JButton selectFileButton = new JButton("<html>"
+                + "<b>Select Photo File</b><br/>"
+                + "<span style='font-size:8px;color:gray;'>Choose an existing photo from your computer</span>"
+                + "</html>");
+            selectFileButton.setIcon(scaledIcon);
+            selectFileButton.setHorizontalAlignment(SwingConstants.LEFT);    
+            selectFileButton.setHorizontalTextPosition(SwingConstants.RIGHT);  
+            selectFileButton.setVerticalTextPosition(SwingConstants.CENTER);
+            selectFileButton.setIconTextGap(8); 
+            selectFileButton.setPreferredSize(new Dimension(300, 60)); 
+            selectFileButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             selectFileButton.addActionListener(e -> selectPhotoFile());
-            
+
             gbc.gridx = 0; gbc.gridy = 0;
             optionsPanel.add(selectFileButton, gbc);
             
             // Option 2: Use device camera
-            JButton cameraButton = createOptionButton(
-                "📷 Take New Photo", 
-                "Open camera app to take a new photo",
-                new Color(25, 118, 210)
-            );
+            ImageIcon cameraIcon = new ImageIcon("src/main/resources/images/takePhoto.png");
+            Image imgCameraIcon = cameraIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
+            ImageIcon scaledCameraIcon = new ImageIcon(imgCameraIcon);
+            JButton cameraButton = new JButton("<html>"
+                + "<b>Take New Photo</b><br/>"
+                + "<span style='font-size:8px;color:gray;'>Open camera app to take a new photo</span>"
+                + "</html>");
+            cameraButton.setIcon(scaledCameraIcon);
+            cameraButton.setHorizontalAlignment(SwingConstants.LEFT);       
+            cameraButton.setHorizontalTextPosition(SwingConstants.RIGHT);   
+            cameraButton.setVerticalTextPosition(SwingConstants.CENTER);
+            cameraButton.setIconTextGap(8); 
+            cameraButton.setPreferredSize(new Dimension(300, 60)); 
+            cameraButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             cameraButton.addActionListener(e -> takeNewPhoto());
-            
+        
             gbc.gridy = 1;
             optionsPanel.add(cameraButton, gbc);
             
             // Option 3: Use mock image for testing
+            
             JButton mockButton = createOptionButton(
                 "🎭 Use Test Image", 
                 "Generate a sample image for testing",
@@ -138,13 +169,14 @@ public class CameraUtil {
             mockButton.addActionListener(e -> useMockImage());
             
             gbc.gridy = 2;
-            optionsPanel.add(mockButton, gbc);
+            // optionsPanel.add(mockButton, gbc);
             
             add(optionsPanel, BorderLayout.CENTER);
             
             // Bottom panel with cancel button
             JPanel bottomPanel = new JPanel(new FlowLayout());
-            JButton cancelButton = new JButton("❌ Cancel");
+            bottomPanel.setBackground(AppColor.getColor("lightViolet"));
+            CustomButton cancelButton = new CustomButton("Cancel", accountType.TEACHER);
             cancelButton.addActionListener(e -> {
                 confirmed = false;
                 dispose();
@@ -163,11 +195,13 @@ public class CameraUtil {
             button.setPreferredSize(new Dimension(400, 80));
             
             JLabel titleLabel = new JLabel(title, JLabel.CENTER);
-            titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
+            // titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
+            titleLabel.setFont(getFont().deriveFont(Font.BOLD, 14f));
             titleLabel.setForeground(Color.WHITE);
             
             JLabel descLabel = new JLabel(description, JLabel.CENTER);
-            descLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+            // descLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+            descLabel.setFont(getFont().deriveFont(Font.PLAIN, 11f));
             descLabel.setForeground(Color.WHITE);
             
             JPanel textPanel = new JPanel(new BorderLayout());
@@ -280,4 +314,7 @@ public class CameraUtil {
             return confirmed ? capturedImageBytes : null;
         }
     }
+
+    
+
 }

@@ -1,12 +1,14 @@
 package ui.panels;
 
 import model.Attendance;
+import ui.components.AppColor;
+import ui.components.CustomButton;
+import ui.components.CustomButton.accountType;
+import ui.components.CustomMessageDialog;
 import util.CameraUtil;
 import util.ImageViewerUtil;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -26,8 +28,8 @@ public class AttendanceDetailDialog extends JDialog {
     private JTextField checkOutTimeField;
     private JTextField lateArrivalTimeField;
     private JTextArea excuseReasonArea;
-    private JButton saveButton;
-    private JButton cancelButton;
+    private CustomButton saveButton;
+    private CustomButton cancelButton;
     private JButton viewCheckInImageButton;
     private JButton captureCheckInImageButton;
     private JButton viewCheckOutImageButton;
@@ -45,7 +47,7 @@ public class AttendanceDetailDialog extends JDialog {
         setupEventHandlers();
         loadData();
         
-        setSize(400, 350);
+        setSize(500, 350);
         setLocationRelativeTo(parent);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
     }
@@ -66,11 +68,16 @@ public class AttendanceDetailDialog extends JDialog {
     }
     
     private void initializeComponents() {
+        setBackground(AppColor.getColor("lightViolet"));
+        getContentPane().setBackground(AppColor.getColor("lightViolet"));
+
         studentNameLabel = new JLabel();
-        studentNameLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+        // studentNameLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+        studentNameLabel.setFont(studentNameLabel.getFont().deriveFont(Font.BOLD, 14f));
         
         dateLabel = new JLabel();
-        dateLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        // dateLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        dateLabel.setFont(dateLabel.getFont().deriveFont(Font.PLAIN, 12f));
         
         statusCombo = new JComboBox<>(new String[]{"PRESENT", "ABSENT", "LATE"});
         
@@ -93,18 +100,19 @@ public class AttendanceDetailDialog extends JDialog {
         viewCheckOutImageButton = new JButton("View");
         captureCheckOutImageButton = new JButton("Capture");
         
-        saveButton = new JButton("Save");
-        cancelButton = new JButton("Cancel");
+        saveButton = new CustomButton("Save", accountType.TEACHER);
+        cancelButton = new CustomButton("Cancel", accountType.TEACHER);
     }
     
     private void layoutComponents() {
         setLayout(new BorderLayout());
-        
+
         // Header panel
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
         headerPanel.add(studentNameLabel, BorderLayout.CENTER);
         headerPanel.add(dateLabel, BorderLayout.SOUTH);
+        headerPanel.setOpaque(false);
         
         // Form panel
         JPanel formPanel = new JPanel(new GridBagLayout());
@@ -129,6 +137,7 @@ public class AttendanceDetailDialog extends JDialog {
         JPanel checkInImagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
         checkInImagePanel.add(viewCheckInImageButton);
         checkInImagePanel.add(captureCheckInImageButton);
+        checkInImagePanel.setOpaque(false);
         formPanel.add(checkInImagePanel, gbc);
         
         // Check-out time
@@ -142,6 +151,7 @@ public class AttendanceDetailDialog extends JDialog {
         JPanel checkOutImagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
         checkOutImagePanel.add(viewCheckOutImageButton);
         checkOutImagePanel.add(captureCheckOutImageButton);
+        checkOutImagePanel.setOpaque(false);
         formPanel.add(checkOutImagePanel, gbc);
         
         // Late arrival time
@@ -155,11 +165,13 @@ public class AttendanceDetailDialog extends JDialog {
         formPanel.add(new JLabel("Excuse Reason:"), gbc);
         gbc.gridx = 1; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.BOTH; gbc.weightx = 1.0; gbc.weighty = 1.0;
         formPanel.add(new JScrollPane(excuseReasonArea), gbc);
+        formPanel.setOpaque(false);
         
         // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout());
         buttonPanel.add(saveButton);
         buttonPanel.add(cancelButton);
+        buttonPanel.setOpaque(false);
         
         add(headerPanel, BorderLayout.NORTH);
         add(formPanel, BorderLayout.CENTER);
@@ -175,8 +187,11 @@ public class AttendanceDetailDialog extends JDialog {
                 ImageViewerUtil.showImage(this, attendance.getCheckInImage(), 
                     "Check-in Image - " + attendance.getStudentName());
             } else {
-                JOptionPane.showMessageDialog(this, "No check-in image available", 
-                    "Information", JOptionPane.INFORMATION_MESSAGE);
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "info", 
+                    "No check-in image available", 
+                    CustomMessageDialog.Type.INFO);
+                // JOptionPane.showMessageDialog(this, "No check-in image available", 
+                //     "Information", JOptionPane.INFORMATION_MESSAGE);
             }
         });
         
@@ -187,8 +202,11 @@ public class AttendanceDetailDialog extends JDialog {
                 if (attendance.getCheckInTime() == null) {
                     checkInTimeField.setText(LocalTime.now().format(timeFormatter));
                 }
-                JOptionPane.showMessageDialog(this, "Check-in image captured!", 
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "info", 
+                    "Check-in image captured!", 
+                    CustomMessageDialog.Type.SUCCESS);
+                // JOptionPane.showMessageDialog(this, "Check-in image captured!", 
+                //     "Success", JOptionPane.INFORMATION_MESSAGE);
             }
         });
         
@@ -197,16 +215,22 @@ public class AttendanceDetailDialog extends JDialog {
                 ImageViewerUtil.showImage(this, attendance.getCheckOutImage(), 
                     "Check-out Image - " + attendance.getStudentName());
             } else {
-                JOptionPane.showMessageDialog(this, "No check-out image available", 
-                    "Information", JOptionPane.INFORMATION_MESSAGE);
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "info", 
+                    "No check-out image available", 
+                    CustomMessageDialog.Type.INFO);
+                // JOptionPane.showMessageDialog(this, "No check-out image available", 
+                //     "Information", JOptionPane.INFORMATION_MESSAGE);
             }
         });
         
         captureCheckOutImageButton.addActionListener(e -> {
             if (attendance.getCheckInTime() == null && checkInTimeField.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this, 
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "warning", 
                     "Student must check-in before check-out", 
-                    "Warning", JOptionPane.WARNING_MESSAGE);
+                    CustomMessageDialog.Type.ERROR);
+                // JOptionPane.showMessageDialog(this, 
+                //     "Student must check-in before check-out", 
+                //     "Warning", JOptionPane.WARNING_MESSAGE);
                 return;
             }
             
@@ -216,8 +240,11 @@ public class AttendanceDetailDialog extends JDialog {
                 if (attendance.getCheckOutTime() == null) {
                     checkOutTimeField.setText(LocalTime.now().format(timeFormatter));
                 }
-                JOptionPane.showMessageDialog(this, "Check-out image captured!", 
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "success", 
+                        "Check-out image captured!", 
+                        CustomMessageDialog.Type.SUCCESS);
+                // JOptionPane.showMessageDialog(this, "Check-out image captured!", 
+                //     "Success", JOptionPane.INFORMATION_MESSAGE);
             }
         });
         
@@ -262,31 +289,47 @@ public class AttendanceDetailDialog extends JDialog {
         switch (status) {
             case "PRESENT":
                 checkInTimeField.setEnabled(true);
+                checkInTimeField.setBackground(Color.WHITE);
                 checkOutTimeField.setEnabled(true);
+                checkOutTimeField.setBackground(Color.WHITE);
                 lateArrivalTimeField.setEnabled(false);
+                lateArrivalTimeField.setBackground(AppColor.getColor("softViolet"));
                 lateArrivalTimeField.setText("");
                 excuseReasonArea.setEnabled(false);
                 captureCheckInImageButton.setEnabled(true);
                 captureCheckOutImageButton.setEnabled(true);
+                viewCheckInImageButton.setEnabled(true);
+                viewCheckOutImageButton.setEnabled(true);
                 break;
                 
             case "ABSENT":
                 checkInTimeField.setEnabled(false);
                 checkInTimeField.setText("");
+                checkInTimeField.setBackground(AppColor.getColor("softViolet"));
                 checkOutTimeField.setEnabled(false);
                 checkOutTimeField.setText("");
+                checkOutTimeField.setBackground(AppColor.getColor("softViolet"));
                 lateArrivalTimeField.setEnabled(false);
                 lateArrivalTimeField.setText("");
+                lateArrivalTimeField.setBackground(AppColor.getColor("softViolet"));
                 excuseReasonArea.setEnabled(true);
+                viewCheckInImageButton.setEnabled(false);
+                viewCheckOutImageButton.setEnabled(false);
                 captureCheckInImageButton.setEnabled(false);
                 captureCheckOutImageButton.setEnabled(false);
                 break;
                 
             case "LATE":
                 checkInTimeField.setEnabled(true);
+                checkInTimeField.setBackground(Color.WHITE);
                 checkOutTimeField.setEnabled(true);
+                checkOutTimeField.setBackground(Color.WHITE);
                 lateArrivalTimeField.setEnabled(true);
+                lateArrivalTimeField.setBackground(Color.WHITE);
                 excuseReasonArea.setEnabled(true);
+                excuseReasonArea.setBackground(Color.WHITE);
+                viewCheckInImageButton.setEnabled(true);
+                viewCheckOutImageButton.setEnabled(true);
                 captureCheckInImageButton.setEnabled(true);
                 captureCheckOutImageButton.setEnabled(true);
                 break;
@@ -305,10 +348,13 @@ public class AttendanceDetailDialog extends JDialog {
                     LocalTime checkInTime = LocalTime.parse(checkInText, timeFormatter);
                     attendance.setCheckInTime(checkInTime);
                 } catch (DateTimeParseException e) {
-                    JOptionPane.showMessageDialog(this,
-                        "Invalid check-in time format. Please use HH:MM format.",
-                        "Validation Error",
-                        JOptionPane.ERROR_MESSAGE);
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "error", 
+                        "Invalid check-in time format. Please use HH:MM format.", 
+                        CustomMessageDialog.Type.ERROR);
+                    // JOptionPane.showMessageDialog(this,
+                    //     "Invalid check-in time format. Please use HH:MM format.",
+                    //     "Validation Error",
+                    //     JOptionPane.ERROR_MESSAGE);
                     return false;
                 }
             } else {
@@ -322,10 +368,13 @@ public class AttendanceDetailDialog extends JDialog {
                     LocalTime checkOutTime = LocalTime.parse(checkOutText, timeFormatter);
                     attendance.setCheckOutTime(checkOutTime);
                 } catch (DateTimeParseException e) {
-                    JOptionPane.showMessageDialog(this,
-                        "Invalid check-out time format. Please use HH:MM format.",
-                        "Validation Error",
-                        JOptionPane.ERROR_MESSAGE);
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "error", 
+                        "Invalid check-out time format. Please use HH:MM format.", 
+                        CustomMessageDialog.Type.ERROR);
+                    // JOptionPane.showMessageDialog(this,
+                    //     "Invalid check-out time format. Please use HH:MM format.",
+                    //     "Validation Error",
+                    //     JOptionPane.ERROR_MESSAGE);
                     return false;
                 }
             } else {
@@ -339,10 +388,13 @@ public class AttendanceDetailDialog extends JDialog {
                     LocalTime lateTime = LocalTime.parse(lateText, timeFormatter);
                     attendance.setLateArrivalTime(lateTime);
                 } catch (DateTimeParseException e) {
-                    JOptionPane.showMessageDialog(this,
-                        "Invalid late arrival time format. Please use HH:MM format.",
-                        "Validation Error",
-                        JOptionPane.ERROR_MESSAGE);
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "error", 
+                        "Invalid late arrival time format. Please use HH:MM format.", 
+                        CustomMessageDialog.Type.ERROR);
+                    // JOptionPane.showMessageDialog(this,
+                    //     "Invalid late arrival time format. Please use HH:MM format.",
+                    //     "Validation Error",
+                    //     JOptionPane.ERROR_MESSAGE);
                     return false;
                 }
             } else {
@@ -355,18 +407,24 @@ public class AttendanceDetailDialog extends JDialog {
             
             // Validate based on status
             if ("PRESENT".equals(status) && attendance.getCheckInTime() == null) {
-                JOptionPane.showMessageDialog(this,
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "error", 
                     "Check-in time is required for present students.",
-                    "Validation Error",
-                    JOptionPane.ERROR_MESSAGE);
+                    CustomMessageDialog.Type.ERROR);
+                // JOptionPane.showMessageDialog(this,
+                //     "Check-in time is required for present students.",
+                //     "Validation Error",
+                //     JOptionPane.ERROR_MESSAGE);
                 return false;
             }
             
             if ("LATE".equals(status) && attendance.getLateArrivalTime() == null) {
-                JOptionPane.showMessageDialog(this,
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "error", 
                     "Late arrival time is required for late students.",
-                    "Validation Error",
-                    JOptionPane.ERROR_MESSAGE);
+                    CustomMessageDialog.Type.ERROR);
+                // JOptionPane.showMessageDialog(this,
+                //     "Late arrival time is required for late students.",
+                //     "Validation Error",
+                //     JOptionPane.ERROR_MESSAGE);
                 return false;
             }
             
@@ -378,10 +436,13 @@ public class AttendanceDetailDialog extends JDialog {
             return true;
             
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(AttendanceDetailDialog.this), "error", 
                 "Error validating data: " + e.getMessage(),
-                "Validation Error",
-                JOptionPane.ERROR_MESSAGE);
+                CustomMessageDialog.Type.ERROR);
+            // JOptionPane.showMessageDialog(this,
+            //     "Error validating data: " + e.getMessage(),
+            //     "Validation Error",
+            //     JOptionPane.ERROR_MESSAGE);
             return false;
         }
     }

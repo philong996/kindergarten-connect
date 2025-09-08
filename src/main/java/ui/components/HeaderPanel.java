@@ -198,7 +198,7 @@ public class HeaderPanel extends JPanel {
                 header.setHeaderColor(AppColor.getColor("yellowOrange"));
                 break;
             case "TEACHER":
-                header.setHeaderColor(AppColor.getColor("darkGreen")); // Green
+                header.setHeaderColor(AppColor.getColor("darkViolet")); // Green
                 break;
             case "PARENT":
                 header.setHeaderColor(AppColor.getColor("greenBlue")); // Orange

@@ -128,36 +128,85 @@ public class FormBuilder {
     /**
      * Build the form panel
      */
+    // public JPanel build() {
+    //     JPanel formPanel = new JPanel(new GridBagLayout());
+    //     formPanel.setOpaque(false);
+        
+    //     if (title != null) {
+    //         formPanel.setBorder(BorderFactory.createTitledBorder(title));
+    //     }
+        
+    //     GridBagConstraints gbc = new GridBagConstraints();
+    //     gbc.insets = new Insets(5, 5, 5, 5);
+    //     gbc.anchor = GridBagConstraints.WEST;
+        
+    //     int row = 0;
+    //     int col = 0;
+        
+    //     for (FormField field : formFields) {
+    //         gbc.gridx = col;
+    //         gbc.gridy = row;
+    //         gbc.fill = GridBagConstraints.HORIZONTAL;
+    //         gbc.weightx = 1.0;
+            
+    //         formPanel.add(field, gbc);
+            
+    //         col++;
+    //         if (col >= columns) {
+    //             col = 0;
+    //             row++;
+    //         }
+    //     }
+        
+    //     return formPanel;
+    // }
+
     public JPanel build() {
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setOpaque(false);
-        
+    
         if (title != null) {
             formPanel.setBorder(BorderFactory.createTitledBorder(title));
         }
-        
+        // --- Tính max width của tất cả label ---
+        int maxLabelWidth = 0;
+        for (FormField field : formFields) {
+            JLabel label = field.getLabel();
+            Dimension size = label.getPreferredSize();
+            if (size.width > maxLabelWidth) {
+                maxLabelWidth = size.width;
+            }
+        }
+    
+        // --- Set lại width cho tất cả label ---
+        for (FormField field : formFields) {
+            JLabel label = field.getLabel();
+            Dimension size = label.getPreferredSize();
+            label.setPreferredSize(new Dimension(maxLabelWidth, size.height));
+        }
+    
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.anchor = GridBagConstraints.WEST;
-        
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+    
         int row = 0;
         int col = 0;
-        
+    
         for (FormField field : formFields) {
             gbc.gridx = col;
             gbc.gridy = row;
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.weightx = 1.0;
-            
+    
             formPanel.add(field, gbc);
-            
+    
             col++;
             if (col >= columns) {
                 col = 0;
                 row++;
             }
         }
-        
+    
         return formPanel;
     }
     

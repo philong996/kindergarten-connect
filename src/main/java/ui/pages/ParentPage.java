@@ -213,23 +213,7 @@ public class ParentPage extends BaseAuthenticatedPage {
             totalRecordsLabel.setText("Dev. Records: " + overview.get("total_development_records"));
         }
     }
-    
-    // private void onChildSelectionChanged() {
-    //     if (childCombo == null || children.isEmpty()) return;
-        
-    //     int selectedIndex = childCombo.getSelectedIndex();
-    //     if (selectedIndex < 0 || selectedIndex >= children.size()) return;
-        
-    //     Student selectedChild = children.get(selectedIndex);
-        
-    //     // Update the child profile tab with selected child details
-    //     updateChildProfileDetails(selectedChild);
-        // Update the development tab
-        // updateChildDevelopmentPanel(selectedChild);
-        
-        // Update the attendance history tab
-        // updateAttendanceHistoryPanel(selectedChild);
-    // }
+
     
     private void updateChildProfileDetails(Student child) {
         JPanel detailPanel = (JPanel) mainPanel.getClientProperty("detailPanel");
@@ -259,7 +243,7 @@ public class ParentPage extends BaseAuthenticatedPage {
             // Create new PhysicalDevelopmentPanel for the selected child
             boolean isBoy = selectedChild.isMale(); // Use the new helper method
             PhysicalDevelopmentPanel physicalPanel = new PhysicalDevelopmentPanel(
-                selectedChild.getId(), selectedChild.getName(), isBoy
+                selectedChild.getId(), selectedChild.getName(), selectedChild.getClassName(), isBoy
             );
             
             // Add header info about selected child
@@ -281,7 +265,7 @@ public class ParentPage extends BaseAuthenticatedPage {
             attendanceHistoryPanel.removeAll();
             
             // Create new AttendanceHistoryPanel for the selected child's class
-            AttendanceHistoryPanel historyPanel = new AttendanceHistoryPanel(selectedChild.getClassId());
+            AttendanceHistoryPanel historyPanel = new AttendanceHistoryPanel(selectedChild.getClassId(), authService);
             
             // Set default date range to last month
             LocalDate endDate = LocalDate.now();
@@ -297,7 +281,7 @@ public class ParentPage extends BaseAuthenticatedPage {
             headerPanel.add(new JLabel("Attendance history for: " + selectedChild.getName() + 
                                      " (" + (selectedChild.getClassName() != null ? selectedChild.getClassName() : "Class ID: " + selectedChild.getClassId()) + ")"));
             
-            attendanceHistoryPanel.add(headerPanel, BorderLayout.NORTH);
+            // attendanceHistoryPanel.add(headerPanel, BorderLayout.NORTH);
             attendanceHistoryPanel.add(historyPanel, BorderLayout.CENTER);
             
             attendanceHistoryPanel.revalidate();

@@ -3,7 +3,10 @@ package ui.panels;
 import model.PhysicalDevelopmentRecord;
 import service.PhysicalDevelopmentService;
 import ui.components.AppColor;
+import ui.components.CustomButton;
 import ui.components.RoundedBorder;
+import ui.components.CustomButton.accountType;
+import ui.components.MultiLineCellRenderer;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -23,6 +26,7 @@ public class PhysicalDevelopmentPanel extends JPanel {
     private PhysicalDevelopmentService physicalService;
     private int studentId;
     private String studentName;
+    private String className;
     private boolean isBoy;
     private int teacherId; // For teacher operations
     private boolean isTeacherView;
@@ -39,6 +43,7 @@ public class PhysicalDevelopmentPanel extends JPanel {
     private JLabel weightChangeLabel;
     private JLabel bmiChangeLabel;
     private JLabel growthTrendLabel;
+    private JLabel classLabel;
     private JTable historyTable;
     private DefaultTableModel tableModel;
     private JButton addRecordButton;
@@ -47,15 +52,26 @@ public class PhysicalDevelopmentPanel extends JPanel {
     
     private DecimalFormat df = new DecimalFormat("#.##");
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+
+    // Color scheme
+    private Color backgroundColor;
+    private Color labelColor;
     
-    public PhysicalDevelopmentPanel(int studentId, String studentName, boolean isBoy, int teacherId, boolean isTeacherView) {
+    public PhysicalDevelopmentPanel(int studentId, String studentName, String className, boolean isBoy, int teacherId, boolean isTeacherView) {
         this.studentId = studentId;
         this.studentName = studentName;
         this.isBoy = isBoy;
         this.teacherId = teacherId;
         this.isTeacherView = isTeacherView;
+        this.className = className;
         this.physicalService = new PhysicalDevelopmentService();
-        
+        if (isTeacherView) {
+            this.backgroundColor = AppColor.getColor("softViolet");
+            this.labelColor = AppColor.getColor("darkViolet");
+        } else {
+            this.backgroundColor = AppColor.getColor("lightGraylishYellow");
+            this.labelColor = AppColor.getColor("darkGreen");
+        }
         initializeComponents();
         layoutComponents();
         loadData();
@@ -66,13 +82,13 @@ public class PhysicalDevelopmentPanel extends JPanel {
     }
     
     // Constructor for parent view (no teacher actions)
-    public PhysicalDevelopmentPanel(int studentId, String studentName) {
-        this(studentId, studentName, true,  -1, false);
+    public PhysicalDevelopmentPanel(int studentId, String studentName, String className, boolean isBoy) {
+        this(studentId, studentName, className, isBoy,  -1, false);
     }
 
-    public PhysicalDevelopmentPanel(int studentId, String studentName, boolean isBoy) {
-        this(studentId, studentName, true, -1, false);
-    }
+    // public PhysicalDevelopmentPanel(int studentId, String studentName, String className, boolean isBoy) {
+    //     this(studentId, studentName, className, isBoy, -1, false);
+    // }
     
     private void initializeComponents() {
         setLayout(new BorderLayout());
@@ -94,7 +110,7 @@ public class PhysicalDevelopmentPanel extends JPanel {
         if (isBoy) {
             sexLabel.setForeground(AppColor.getColor("blue")); // Blue    
         } else {
-            sexLabel.setForeground(AppColor.getColor("lightPink")); // pink
+            sexLabel.setForeground(AppColor.getColor("pink")); // pink
         }
         ageLabel = new JLabel("", JLabel.CENTER);
         ageLabel.setFont(ageLabel.getFont().deriveFont(Font.BOLD, 16f));
@@ -109,6 +125,7 @@ public class PhysicalDevelopmentPanel extends JPanel {
         weightChangeLabel = new JLabel("");
         bmiChangeLabel = new JLabel("");
         growthTrendLabel = new JLabel("");
+        classLabel = new JLabel("Class: " + className);
         
         // History table
         String[] columnNames = {"Date", "Height (cm)", "Weight (kg)", "BMI", "Age", "Teacher", "Notes"};
@@ -125,6 +142,7 @@ public class PhysicalDevelopmentPanel extends JPanel {
         historyTable.setOpaque(false);
         historyTable.setBackground(new Color(0, 0, 0, 0)); // trong suốt
         historyTable.setShowGrid(false); 
+        historyTable.getColumnModel().getColumn(6).setCellRenderer(new MultiLineCellRenderer()); // notes column    
         JTableHeader header = historyTable.getTableHeader();
             header.setDefaultRenderer(new TableCellRenderer() {
                 @Override
@@ -133,8 +151,8 @@ public class PhysicalDevelopmentPanel extends JPanel {
                                                                int row, int column) {
                     JLabel label = new JLabel(value.toString(), SwingConstants.CENTER);
                     label.setOpaque(true);
-                    label.setBackground(AppColor.getColor("lightGraylishYellow")); // màu nền header
-                    label.setBorder(BorderFactory.createLineBorder(AppColor.getColor("darkGreen"), 2, true)); // bo tròn
+                    label.setBackground(backgroundColor); // màu nền header
+                    label.setBorder(BorderFactory.createLineBorder(labelColor, 2, true)); // bo tròn
                     label.setFont(label.getFont().deriveFont(Font.BOLD));
                     return label;
                 }
@@ -143,10 +161,11 @@ public class PhysicalDevelopmentPanel extends JPanel {
 
         
         // Buttons (only for teachers)
+        System.out.println("isTeacherView: " + isTeacherView);
         if (isTeacherView) {
-            addRecordButton = new JButton("Add Measurement");
-            editRecordButton = new JButton("Edit Selected");
-            deleteRecordButton = new JButton("Delete Selected");
+            addRecordButton = new CustomButton("Add Measurement", accountType.TEACHER);
+            editRecordButton = new CustomButton("Edit Selected", accountType.TEACHER);
+            deleteRecordButton = new CustomButton("Delete Selected", accountType.TEACHER);
             
             editRecordButton.setEnabled(false);
             deleteRecordButton.setEnabled(false);
@@ -154,7 +173,6 @@ public class PhysicalDevelopmentPanel extends JPanel {
     }
     
     private void layoutComponents() {
-        // Current data panel
         JPanel currentDataPanel = new JPanel(new GridBagLayout());
         currentDataPanel.setBorder(BorderFactory.createTitledBorder("Current Data"));
         
@@ -187,6 +205,9 @@ public class PhysicalDevelopmentPanel extends JPanel {
 
         gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 3;
         currentDataPanel.add(growthTrendLabel, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 3;
+        currentDataPanel.add(classLabel, gbc);
         currentDataPanel.setOpaque(false);
         
         add(currentDataPanel, BorderLayout.NORTH);
@@ -197,18 +218,20 @@ public class PhysicalDevelopmentPanel extends JPanel {
         tableScrollPane.setPreferredSize(new Dimension(0, 200));
         tableScrollPane.setOpaque(false);
         // tableScrollPane.getViewport().setOpaque(false);
-        tableScrollPane.getViewport().setBackground(AppColor.getColor("lightGraylishYellow")); // trong suốt
-        add(tableScrollPane, BorderLayout.CENTER);
-        
-        // Button panel (only for teachers)
+        tableScrollPane.getViewport().setBackground(backgroundColor); // trong suốt
+        add(tableScrollPane, BorderLayout.CENTER); 
+
         if (isTeacherView) {
-            JPanel buttonPanel = new JPanel(new FlowLayout());
+            // Button panel
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
             buttonPanel.add(addRecordButton);
             buttonPanel.add(editRecordButton);
             buttonPanel.add(deleteRecordButton);
+            buttonPanel.setOpaque(false);
             add(buttonPanel, BorderLayout.SOUTH);
         }
     }
+
     
     private void loadData() {
         try {
@@ -381,7 +404,7 @@ public class PhysicalDevelopmentPanel extends JPanel {
         cellPanel.add(topLabel);
         cellPanel.add(bottomLabel);
         cellPanel.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(15, AppColor.getColor("greenBlue"), 3),            
+            new RoundedBorder(15, labelColor, 3),            
             BorderFactory.createEmptyBorder(10, 10, 10, 10) 
         ));
         return cellPanel;

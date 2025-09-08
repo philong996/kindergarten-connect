@@ -3,11 +3,19 @@ package ui.panels;
 import model.Attendance;
 import service.AttendanceService;
 import service.AttendanceService.AttendanceSummary;
+import service.AuthService;
+import ui.components.AppColor;
+import ui.components.CustomButton;
+import ui.components.CustomMessageDialog;
+import ui.components.CustomButton.accountType;
+import ui.components.RoundedBorder;
 import util.CameraUtil;
 import util.ImageViewerUtil;
+import util.ProfileImageUtil;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
@@ -28,6 +36,7 @@ public class AttendancePanel extends JPanel {
     @SuppressWarnings("unused") // May be used for future authorization features
     private int teacherId;
     private LocalDate selectedDate;
+    private AuthService authService;
     
     // Components
     private JLabel titleLabel;
@@ -36,12 +45,12 @@ public class AttendancePanel extends JPanel {
     private JSpinner dateSpinner;
     private JButton todayButton;
     private JButton refreshButton;
-    private JButton saveAllButton;
-    private JButton markAllPresentButton;
-    private JButton markAllAbsentButton;
-    private JButton viewHistoryButton;
-    private JButton bulkCheckInButton;
-    private JButton bulkCheckOutButton;
+    private CustomButton saveAllButton;
+    private CustomButton markAllPresentButton;
+    private CustomButton markAllAbsentButton;
+    private CustomButton viewHistoryButton;
+    private CustomButton bulkCheckInButton;
+    private CustomButton bulkCheckOutButton;
     
     private JTable attendanceTable;
     private AttendanceTableModel tableModel;
@@ -50,17 +59,19 @@ public class AttendancePanel extends JPanel {
     // Data
     private List<Attendance> attendanceList;
     private Map<Integer, Attendance> attendanceMap; // studentId -> Attendance
+    private String role;
     
     // Date formatter
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
-    
-    public AttendancePanel(int classId, int teacherId) {
+
+    public AttendancePanel(int classId, int teacherId, AuthService authService) {
         this.classId = classId;
         this.teacherId = teacherId;
         this.attendanceService = new AttendanceService();
         this.selectedDate = LocalDate.now();
         this.attendanceList = new ArrayList<>();
         this.attendanceMap = new HashMap<>();
+        role = authService.getCurrentUser().getRole();
         
         initializeComponents();
         layoutComponents();
@@ -70,16 +81,18 @@ public class AttendancePanel extends JPanel {
     
     private void initializeComponents() {
         setLayout(new BorderLayout());
+        setOpaque(false);
         setBorder(BorderFactory.createTitledBorder("Daily Attendance Management"));
         
         // Title and date selection
-        titleLabel = new JLabel("Attendance for Class", JLabel.CENTER);
-        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        titleLabel = new JLabel("ATTENDANCE FOR CLASS", JLabel.CENTER);
+        titleLabel.setFont(getFont().deriveFont(Font.BOLD, 18f));
         
         dateLabel = new JLabel("Select Date:", JLabel.RIGHT);
         dateSpinner = new JSpinner(new SpinnerDateModel());
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "dd/MM/yyyy");
         dateSpinner.setEditor(dateEditor);
+        dateSpinner.setPreferredSize(new Dimension(170, 30));
         dateSpinner.setValue(java.sql.Date.valueOf(selectedDate));
         
         todayButton = new JButton("Today");
@@ -87,33 +100,52 @@ public class AttendancePanel extends JPanel {
         
         // Summary label
         summaryLabel = new JLabel("", JLabel.CENTER);
-        summaryLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        summaryLabel.setFont(getFont().deriveFont(Font.PLAIN, 12f));
         
         // Action buttons
-        saveAllButton = new JButton("Save All Changes");
-        markAllPresentButton = new JButton("Mark All Present");
-        markAllAbsentButton = new JButton("Mark All Absent");
-        viewHistoryButton = new JButton("View History");
-        bulkCheckInButton = new JButton("Bulk Check-in");
-        bulkCheckOutButton = new JButton("Bulk Check-out");
+        saveAllButton = new CustomButton("Save All Changes", CustomButton.accountType.TEACHER);
+        markAllPresentButton = new CustomButton("Mark All Present", CustomButton.accountType.TEACHER);
+        markAllAbsentButton = new CustomButton("Mark All Absent", CustomButton.accountType.TEACHER);
+        viewHistoryButton = new CustomButton("View History", CustomButton.accountType.TEACHER);
+        bulkCheckInButton = new CustomButton("Bulk Check-in", CustomButton.accountType.TEACHER);
+        bulkCheckOutButton = new CustomButton("Bulk Check-out", CustomButton.accountType.TEACHER);
         
         // Attendance table
         tableModel = new AttendanceTableModel();
         attendanceTable = new JTable(tableModel);
         attendanceTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         attendanceTable.setRowHeight(30);
+        attendanceTable.setOpaque(false);
+        attendanceTable.setBackground(new Color(0, 0, 0, 0)); // trong suốt
+        attendanceTable.setShowGrid(false); 
+        JTableHeader header = attendanceTable.getTableHeader();
+            header.setDefaultRenderer(new TableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value,
+                                                               boolean isSelected, boolean hasFocus,
+                                                               int row, int column) {
+                    JLabel label = new JLabel(value.toString(), SwingConstants.CENTER);
+                    label.setOpaque(true);
+                    label.setBackground(AppColor.getColor("softViolet")); // màu nền header
+                    label.setBorder(BorderFactory.createLineBorder(AppColor.getColor("darkViolet"), 2, true)); // bo tròn
+                    label.setFont(label.getFont().deriveFont(Font.BOLD));
+                    return label;
+                }
+            });
         
         // Set up custom renderers and editors for status column
         setupTableColumns();
         
         tableScrollPane = new JScrollPane(attendanceTable);
+        tableScrollPane.setOpaque(false);
+        tableScrollPane.getViewport().setBackground(AppColor.getColor("softViolet"));
         tableScrollPane.setPreferredSize(new Dimension(800, 400));
     }
     
     private void setupTableColumns() {
         // Status column with combo box
-        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"PRESENT", "ABSENT", "LATE"});
-        attendanceTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(statusCombo));
+        // JComboBox<String> statusCombo = new JComboBox<>(new String[]{"PRESENT", "ABSENT", "LATE"});
+        // attendanceTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(statusCombo));
         
         // Set column widths
         attendanceTable.getColumnModel().getColumn(0).setPreferredWidth(180); // Student Name
@@ -144,6 +176,7 @@ public class AttendancePanel extends JPanel {
         
         // Date selection panel
         JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        datePanel.setOpaque(false);
         datePanel.add(dateLabel);
         datePanel.add(dateSpinner);
         datePanel.add(todayButton);
@@ -151,14 +184,16 @@ public class AttendancePanel extends JPanel {
         
         // Summary panel
         JPanel summaryPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        summaryPanel.setOpaque(false);
         summaryPanel.add(summaryLabel);
-        
+        topPanel.setOpaque(false);
         topPanel.add(titleLabel, BorderLayout.NORTH);
         topPanel.add(datePanel, BorderLayout.WEST);
         topPanel.add(summaryPanel, BorderLayout.CENTER);
         
         // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setOpaque(false);
         buttonPanel.add(markAllPresentButton);
         buttonPanel.add(markAllAbsentButton);
         buttonPanel.add(bulkCheckInButton);
@@ -169,7 +204,7 @@ public class AttendancePanel extends JPanel {
         // Main layout
         add(topPanel, BorderLayout.NORTH);
         add(tableScrollPane, BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
+        // add(buttonPanel, BorderLayout.SOUTH);
     }
     
     private void setupEventHandlers() {
@@ -227,10 +262,13 @@ public class AttendancePanel extends JPanel {
             updateSummary();
             
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, 
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "error", 
                 "Error loading attendance data: " + e.getMessage(), 
-                "Error", 
-                JOptionPane.ERROR_MESSAGE);
+                CustomMessageDialog.Type.ERROR);
+            // JOptionPane.showMessageDialog(this, 
+            //     "Error loading attendance data: " + e.getMessage(), 
+            //     "Error", 
+            //     JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -274,10 +312,13 @@ public class AttendancePanel extends JPanel {
             }
             
             if (toSave.isEmpty()) {
-                JOptionPane.showMessageDialog(this, 
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "info", 
                     "No changes to save.", 
-                    "Information", 
-                    JOptionPane.INFORMATION_MESSAGE);
+                    CustomMessageDialog.Type.INFO);
+                // JOptionPane.showMessageDialog(this, 
+                //     "No changes to save.", 
+                //     "Information", 
+                //     JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
             
@@ -291,24 +332,33 @@ public class AttendancePanel extends JPanel {
                 boolean success = attendanceService.markBulkAttendance(toSave);
                 
                 if (success) {
-                    JOptionPane.showMessageDialog(this,
-                        "Attendance saved successfully!",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "success", 
+                        "Attendance saved successfully!", 
+                        CustomMessageDialog.Type.SUCCESS);
+                    // JOptionPane.showMessageDialog(this,
+                    //     "Attendance saved successfully!",
+                    //     "Success",
+                    //     JOptionPane.INFORMATION_MESSAGE);
                     loadAttendanceData(); // Refresh to show saved data
                 } else {
-                    JOptionPane.showMessageDialog(this,
-                        "Some attendance records could not be saved. Please check the console for details.",
-                        "Warning",
-                        JOptionPane.WARNING_MESSAGE);
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "warning", 
+                        "Some attendance records could not be saved. Please check the console for details.", 
+                        CustomMessageDialog.Type.INFO); 
+                    // JOptionPane.showMessageDialog(this,
+                    //     "Some attendance records could not be saved. Please check the console for details.",
+                    //     "Warning",
+                    //     JOptionPane.WARNING_MESSAGE);
                 }
             }
             
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                "Error saving attendance: " + e.getMessage(),
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "error", 
+                "Error saving attendance: " + e.getMessage(), 
+                CustomMessageDialog.Type.ERROR);
+            // JOptionPane.showMessageDialog(this,
+            //     "Error saving attendance: " + e.getMessage(),
+            //     "Error",
+            //     JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -437,7 +487,7 @@ public class AttendancePanel extends JPanel {
         JFrame historyFrame = new JFrame("Attendance History");
         historyFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         
-        AttendanceHistoryPanel historyPanel = new AttendanceHistoryPanel(classId, attendanceService);
+        AttendanceHistoryPanel historyPanel = new AttendanceHistoryPanel(classId, attendanceService, authService);
         
         historyFrame.add(historyPanel);
         historyFrame.setSize(900, 600);
@@ -487,10 +537,14 @@ public class AttendancePanel extends JPanel {
                     }
                     
                 } catch (Exception e) {
-                    JOptionPane.showMessageDialog(this,
-                        "Error saving attendance: " + e.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "error", 
+                        "Error saving attendance: " + e.getMessage(), 
+                        CustomMessageDialog.Type.ERROR);
+                    //  
+                    // JOptionPane.showMessageDialog(this,
+                    //     "Error saving attendance: " + e.getMessage(),
+                    //     "Error",
+                    //     JOptionPane.ERROR_MESSAGE);
                     e.printStackTrace();
                 }
             }
@@ -608,11 +662,11 @@ public class AttendancePanel extends JPanel {
             if (!isSelected) {
                 String status = (String) value;
                 if ("PRESENT".equals(status)) {
-                    c.setBackground(Color.GREEN.brighter());
+                    c.setBackground(AppColor.getColor("lightGreen"));
                 } else if ("ABSENT".equals(status)) {
-                    c.setBackground(Color.RED.brighter());
+                    c.setBackground(AppColor.getColor("lightRed"));
                 } else if ("LATE".equals(status)) {
-                    c.setBackground(Color.YELLOW.brighter());
+                    c.setBackground(AppColor.getColor("lightOrange"));
                 } else {
                     c.setBackground(Color.WHITE);
                 }
@@ -625,7 +679,7 @@ public class AttendancePanel extends JPanel {
     // Custom button renderer for actions column
     private class ActionButtonRenderer extends JButton implements TableCellRenderer {
         public ActionButtonRenderer() {
-            setOpaque(true);
+            setOpaque(false);
         }
         
         @Override
@@ -644,7 +698,6 @@ public class AttendancePanel extends JPanel {
         public ActionButtonEditor() {
             super(new JCheckBox());
             button = new JButton("Edit");
-            button.setOpaque(true);
             button.addActionListener(e -> editAttendanceDetails(selectedRow));
         }
         
@@ -664,7 +717,7 @@ public class AttendancePanel extends JPanel {
     // Custom button renderer for images column
     private class ImageButtonRenderer extends JButton implements TableCellRenderer {
         public ImageButtonRenderer() {
-            setOpaque(true);
+            setOpaque(false);
         }
         
         @Override
@@ -683,7 +736,7 @@ public class AttendancePanel extends JPanel {
         public ImageButtonEditor() {
             super(new JCheckBox());
             button = new JButton("View");
-            button.setOpaque(true);
+            button.setOpaque(false);
             button.addActionListener(e -> showAttendanceImages(selectedRow));
         }
         
@@ -710,14 +763,37 @@ public class AttendancePanel extends JPanel {
             JDialog imageDialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), 
                 "Attendance Images - " + attendance.getStudentName(), true);
             imageDialog.setLayout(new BorderLayout());
+            imageDialog.setBackground(AppColor.getColor("violet"));
             
-            JPanel imagePanel = new JPanel(new GridLayout(2, 2, 10, 10));
+            JPanel imagePanel = new JPanel(new GridLayout(1, 2, 10, 10));
             imagePanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            imagePanel.setOpaque(false);
             
             // Check-in image section
             JPanel checkInPanel = new JPanel(new BorderLayout());
-            checkInPanel.setBorder(BorderFactory.createTitledBorder("Check-in Image"));
-            
+            checkInPanel.setBorder(
+                BorderFactory.createTitledBorder(
+                    BorderFactory.createLineBorder(AppColor.getColor("darkViolet"), 2),
+                    "Check-in Image"
+                    )
+                );
+            checkInPanel.setOpaque(false);    
+
+            if (attendance.getCheckInImage() != null) {
+                byte[] imageData = (byte[]) attendance.getCheckInImage();
+                ImageIcon profileImage = ProfileImageUtil.loadProfileImageFromBytes(imageData, 200, 200);
+                JLabel imageLabel = new JLabel(profileImage);
+                imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                checkInPanel.add(imageLabel, BorderLayout.CENTER);
+                
+            } else {
+                ImageIcon icon = new ImageIcon(getClass().getResource("/images/"+ role + "/photo.png"));
+                Image img = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                JLabel imageLabel = new JLabel(new ImageIcon(img));
+                imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                checkInPanel.add(imageLabel, BorderLayout.CENTER);
+            }
+
             JButton viewCheckInBtn = new JButton("View Check-in Image");
             JButton captureCheckInBtn = new JButton("Capture Check-in");
             
@@ -728,6 +804,8 @@ public class AttendancePanel extends JPanel {
                 } else {
                     JOptionPane.showMessageDialog(imageDialog, "No check-in image available", 
                         "Information", JOptionPane.INFORMATION_MESSAGE);
+                    // JOptionPane.showMessageDialog(imageDialog, "No check-in image available", 
+                    //     "Information", JOptionPane.INFORMATION_MESSAGE);
                 }
             });
             
@@ -754,26 +832,54 @@ public class AttendancePanel extends JPanel {
                         if (success) {
                             tableModel.fireTableRowsUpdated(row, row);
                             updateSummary();
-                            JOptionPane.showMessageDialog(imageDialog, "Check-in image captured and saved successfully!", 
-                                "Success", JOptionPane.INFORMATION_MESSAGE);
+                            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(imageDialog), "success", 
+                                "Check-in image captured and saved successfully!", 
+                                CustomMessageDialog.Type.SUCCESS);
+                            // JOptionPane.showMessageDialog(imageDialog, "Check-in image captured and saved successfully!", 
+                            //     "Success", JOptionPane.INFORMATION_MESSAGE);
                         } else {
-                            JOptionPane.showMessageDialog(imageDialog, "Image captured but failed to save to database. Please try 'Save All Changes'.", 
-                                "Warning", JOptionPane.WARNING_MESSAGE);
+                            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(imageDialog), "warning", 
+                                "Image captured but failed to save to database. Please try 'Save All Changes'.", 
+                                CustomMessageDialog.Type.INFO);
+                            // JOptionPane.showMessageDialog(imageDialog, "Image captured but failed to save to database. Please try 'Save All Changes'.", 
+                            //     "Warning", JOptionPane.WARNING_MESSAGE);
                         }
                     } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(imageDialog, "Error saving image: " + ex.getMessage(), 
-                            "Error", JOptionPane.ERROR_MESSAGE);
+                        CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(imageDialog), "error", 
+                            "Error saving image: " + ex.getMessage(), 
+                            CustomMessageDialog.Type.ERROR);
+                        // JOptionPane.showMessageDialog(imageDialog, "Error saving image: " + ex.getMessage(), 
+                        //     "Error", JOptionPane.ERROR_MESSAGE);
                         ex.printStackTrace();
                     }
                 }
             });
             
-            checkInPanel.add(viewCheckInBtn, BorderLayout.NORTH);
-            checkInPanel.add(captureCheckInBtn, BorderLayout.SOUTH);
+            // checkInPanel.add(viewCheckInBtn, BorderLayout.NORTH);
+            // checkInPanel.add(captureCheckInBtn, BorderLayout.SOUTH);
             
             // Check-out image section
             JPanel checkOutPanel = new JPanel(new BorderLayout());
-            checkOutPanel.setBorder(BorderFactory.createTitledBorder("Check-out Image"));
+            checkOutPanel.setBorder(
+                BorderFactory.createTitledBorder(
+                    BorderFactory.createLineBorder(AppColor.getColor("darkViolet"), 2),
+                    "Check-out Image"
+                )
+            );
+            if (attendance.getCheckInImage() != null) {
+                byte[] imageData = (byte[]) attendance.getCheckOutImage();
+                ImageIcon profileImage = ProfileImageUtil.loadProfileImageFromBytes(imageData, 200, 200);
+                JLabel imageLabel = new JLabel(profileImage);
+                imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                checkOutPanel.add(imageLabel, BorderLayout.CENTER);
+                
+            } else {
+                ImageIcon icon = new ImageIcon(getClass().getResource("/images/" + role + "/photo.png"));
+                Image img = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                JLabel imageLabel = new JLabel(new ImageIcon(img));
+                imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                checkOutPanel.add(imageLabel, BorderLayout.CENTER);
+            }
             
             JButton viewCheckOutBtn = new JButton("View Check-out Image");
             JButton captureCheckOutBtn = new JButton("Capture Check-out");
@@ -783,16 +889,22 @@ public class AttendancePanel extends JPanel {
                     ImageViewerUtil.showImage(imageDialog, attendance.getCheckOutImage(), 
                         "Check-out Image - " + attendance.getStudentName());
                 } else {
-                    JOptionPane.showMessageDialog(imageDialog, "No check-out image available", 
-                        "Information", JOptionPane.INFORMATION_MESSAGE);
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(imageDialog), "info", 
+                        "No check-out image available", 
+                        CustomMessageDialog.Type.INFO);
+                    // JOptionPane.showMessageDialog(imageDialog, "No check-out image available", 
+                    //     "Information", JOptionPane.INFORMATION_MESSAGE);
                 }
             });
             
             captureCheckOutBtn.addActionListener(e -> {
                 if (attendance.getCheckInTime() == null) {
-                    JOptionPane.showMessageDialog(imageDialog, 
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(imageDialog), "warning", 
                         "Student must check-in before check-out", 
-                        "Warning", JOptionPane.WARNING_MESSAGE);
+                        CustomMessageDialog.Type.ERROR);
+                    // JOptionPane.showMessageDialog(imageDialog, 
+                    //     "Student must check-in before check-out", 
+                    //     "Warning", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
                 
@@ -812,22 +924,31 @@ public class AttendancePanel extends JPanel {
                         
                         if (success) {
                             tableModel.fireTableRowsUpdated(row, row);
-                            JOptionPane.showMessageDialog(imageDialog, "Check-out image captured and saved successfully!", 
-                                "Success", JOptionPane.INFORMATION_MESSAGE);
+                            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(imageDialog), "success", 
+                                "Check-out image captured and saved successfully!", 
+                                CustomMessageDialog.Type.SUCCESS);
+                            // JOptionPane.showMessageDialog(imageDialog, "Check-out image captured and saved successfully!", 
+                            //     "Success", JOptionPane.INFORMATION_MESSAGE);
                         } else {
-                            JOptionPane.showMessageDialog(imageDialog, "Image captured but failed to save to database. Please try 'Save All Changes'.", 
-                                "Warning", JOptionPane.WARNING_MESSAGE);
+                            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(imageDialog), "warning", 
+                                "Image captured but failed to save to database. Please try 'Save All Changes'.", 
+                                CustomMessageDialog.Type.INFO);
+                            // JOptionPane.showMessageDialog(imageDialog, "Image captured but failed to save to database. Please try 'Save All Changes'.", 
+                            //     "Warning", JOptionPane.WARNING_MESSAGE);
                         }
                     } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(imageDialog, "Error saving image: " + ex.getMessage(), 
-                            "Error", JOptionPane.ERROR_MESSAGE);
+                        CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(imageDialog), "error", 
+                            "Error saving image: " + ex.getMessage(), 
+                            CustomMessageDialog.Type.ERROR);
+                        // JOptionPane.showMessageDialog(imageDialog, "Error saving image: " + ex.getMessage(), 
+                        //     "Error", JOptionPane.ERROR_MESSAGE);
                         ex.printStackTrace();
                     }
                 }
             });
             
-            checkOutPanel.add(viewCheckOutBtn, BorderLayout.NORTH);
-            checkOutPanel.add(captureCheckOutBtn, BorderLayout.SOUTH);
+            // checkOutPanel.add(viewCheckOutBtn, BorderLayout.NORTH);
+            // checkOutPanel.add(captureCheckOutBtn, BorderLayout.SOUTH);
             
             imagePanel.add(checkInPanel);
             imagePanel.add(checkOutPanel);
@@ -913,10 +1034,10 @@ public class AttendancePanel extends JPanel {
             quickActionsPanel.add(quickCheckInBtn);
             quickActionsPanel.add(quickCheckOutBtn);
             
-            imagePanel.add(quickActionsPanel);
+            // imagePanel.add(quickActionsPanel);
             
             // Close button
-            JButton closeBtn = new JButton("Close");
+            CustomButton closeBtn = new CustomButton("Close", accountType.TEACHER);
             closeBtn.addActionListener(e -> imageDialog.dispose());
             JPanel closePanel = new JPanel(new FlowLayout());
             closePanel.add(closeBtn);
