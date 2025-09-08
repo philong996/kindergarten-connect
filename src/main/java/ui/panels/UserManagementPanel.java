@@ -22,7 +22,7 @@ public class UserManagementPanel extends JPanel {
     private DataTable userTable;
     private SearchPanel searchPanel;
     private FormBuilder formBuilder;
-    private ButtonPanel1 buttonPanel;
+    private ButtonPanel buttonPanel;
     
     // Form field IDs
     private static final String FIELD_USERNAME = "username";
@@ -90,7 +90,7 @@ public class UserManagementPanel extends JPanel {
         loadAvailableSchools();
 
         // Create button panel
-        buttonPanel = ButtonPanel1.createCrudPanel(
+        buttonPanel = ButtonPanel.createCrudPanel(
             e -> addUser(),
             e -> updateUser(),
             e -> deleteUser(),
@@ -325,14 +325,16 @@ public class UserManagementPanel extends JPanel {
             if ("PARENT".equals(user.getRole())) {
                 // Check if a student is selected
                 if (selectedStudent == null) {
-                    DialogFactory.showError(this, "Please search and select a student for the parent.");
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "Please search and select a student for the parent.", CustomMessageDialog.Type.INFO);
+                    // DialogFactory.showError(this, "Please search and select a student for the parent.");
                     return;
                 }
                 
                 // Create parent user with student link
                 success = userService.createParentUserWithStudent(user, selectedStudent.getId());
                 if (success) {
-                    DialogFactory.showSuccess(this, "Parent user created and linked to student: " + selectedStudent.getName());
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "Parent user created and linked to student: " + selectedStudent.getName(), CustomMessageDialog.Type.SUCCESS);
+                    // DialogFactory.showSuccess(this, "Parent user created and linked to student: " + selectedStudent.getName());
                 } else {
                     DialogFactory.showError(this, "Failed to create parent user or link to student.");
                 }
@@ -340,7 +342,8 @@ public class UserManagementPanel extends JPanel {
                 // Create regular user (teacher)
                 success = userService.createUser(user);
                 if (success) {
-                    DialogFactory.showSuccess(this, "User added successfully!");
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "User added successfully!", CustomMessageDialog.Type.SUCCESS);
+                    // DialogFactory.showSuccess(this, "User added successfully!");
                 } else {
                     DialogFactory.showError(this, "Failed to add user. Username might already exist.");
                 }
@@ -351,13 +354,15 @@ public class UserManagementPanel extends JPanel {
                 clearForm();
             }
         } catch (Exception e) {
-            DialogFactory.showError(this, "Error adding user: " + e.getMessage());
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Error", "Error adding user: " + e.getMessage(), CustomMessageDialog.Type.ERROR);
+            // DialogFactory.showError(this, "Error adding user: " + e.getMessage());
         }
     }
 
     private void updateUser() {
         if (selectedUser == null) {
-            DialogFactory.showWarning(this, "Please select a user to update.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "Please select a user to update.", CustomMessageDialog.Type.INFO);
+            // DialogFactory.showWarning(this, "Please select a user to update.");
             return;
         }
         
@@ -375,7 +380,8 @@ public class UserManagementPanel extends JPanel {
             
             boolean success = userService.updateUser(updatedUser);
             if (success) {
-                DialogFactory.showSuccess(this, "User updated successfully!");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "User updated successfully!", CustomMessageDialog.Type.SUCCESS);
+                // DialogFactory.showSuccess(this, "User updated successfully!");
                 loadUsers();
                 clearForm();
             } else {
@@ -388,7 +394,8 @@ public class UserManagementPanel extends JPanel {
 
     private void deleteUser() {
         if (selectedUser == null) {
-            DialogFactory.showWarning(this, "Please select a user to delete.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "Please select a user to delete.", CustomMessageDialog.Type.INFO);
+            // DialogFactory.showWarning(this, "Please select a user to delete.");
             return;
         }
         
@@ -399,7 +406,8 @@ public class UserManagementPanel extends JPanel {
         try {
             boolean success = userService.deleteUser(selectedUser.getId());
             if (success) {
-                DialogFactory.showSuccess(this, "User deleted successfully!");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "User deleted successfully!", CustomMessageDialog.Type.SUCCESS);
+                // DialogFactory.showSuccess(this, "User deleted successfully!");
                 loadUsers();
                 clearForm();
             } else {

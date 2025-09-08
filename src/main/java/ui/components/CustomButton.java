@@ -61,6 +61,52 @@ public class CustomButton extends JButton {
         });
     }
 
+    public CustomButton(String text, accountType type) {
+        super(text);
+        Color bg, hover, fg = Color.WHITE; // Default text color
+        switch (type) {
+            case ADMIN:
+                bg = AppColor.getColor("violet");
+                hover = bg.brighter();
+                fg = Color.BLACK;
+                break;
+            case TEACHER:
+                bg = AppColor.getColor("violet");
+                hover = AppColor.getColor("lightViolet");
+                fg = Color.BLACK;
+                break;
+            case PARENT:
+                bg = AppColor.getColor("greenBlue");
+                hover = bg.brighter();
+                break;
+            default:
+                bg = Color.WHITE;
+                hover = bg.darker();
+                fg = UIManager.getColor("Button.foreground");
+                break;
+        }
+        setContentAreaFilled(false);
+        setOpaque(false);
+        setFocusPainted(false);
+        setBorderPainted(false);
+        setForeground(fg);
+        setBackground(bg);
+        setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                setBackground(hover);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                setBackground(bg);
+            }
+        });
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2 = (Graphics2D) g.create();
@@ -74,4 +120,9 @@ public class CustomButton extends JButton {
         super.paintComponent(g2);
         g2.dispose();
     }
+
+    public enum accountType {
+        DEFAULT, TEACHER, ADMIN, PARENT
+    }
+    
 }

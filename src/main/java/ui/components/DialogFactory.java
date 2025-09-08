@@ -140,16 +140,19 @@ public class DialogFactory {
             add(formBuilder.build(), BorderLayout.CENTER);
             
             // Add buttons
-            ButtonPanel buttonPanel = new ButtonPanel();
-            buttonPanel.addStyledButton("OK", e -> {
-                if (formBuilder.validateRequired()) {
-                    okClicked = true;
-                    dispose();
-                }
-            }, ButtonPanel.ButtonStyle.PRIMARY);
-            
-            buttonPanel.addButton("Cancel", e -> dispose());
-            
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+            CustomButton buttonOK = new CustomButton("OK", AppColor.getColor("violet"), AppColor.getColor("softViolet"), Color.BLACK);
+            CustomButton buttonCancel = new CustomButton("Cancel", AppColor.getColor("violet"), AppColor.getColor("softViolet"), Color.BLACK);
+            buttonPanel.add(buttonOK);
+            buttonPanel.add(buttonCancel);
+            buttonOK.addActionListener(e -> {
+                    if (formBuilder.validateRequired()) {
+                        okClicked = true;
+                        dispose();
+                    }
+                });
+            buttonCancel.addActionListener(e -> dispose());
+
             add(buttonPanel, BorderLayout.SOUTH);
             
             pack();

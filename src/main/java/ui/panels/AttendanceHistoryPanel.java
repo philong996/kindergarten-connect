@@ -3,12 +3,21 @@ package ui.panels;
 import model.Attendance;
 import model.Student;
 import service.AttendanceService;
+import service.AuthService;
+import service.ParentService;
+import ui.components.AppColor;
+import ui.components.CustomButton;
+import ui.components.CustomMessageDialog;
+import ui.components.RoundedBorder;
+import ui.components.CustomButton.accountType;
 import dao.AttendanceDAO.AttendanceStats;
 import dao.StudentDAO;
 import util.ImageViewerUtil;
+import util.ProfileImageUtil;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
@@ -42,11 +51,17 @@ public class AttendanceHistoryPanel extends JPanel {
     private List<Attendance> currentAttendanceData;
     
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+    private String role;
+
+    // Colors based on role
+    private Color BACKGROUND_COLOR;
+    private Color BORDER_COLOR;
     
-    public AttendanceHistoryPanel(int classId, AttendanceService attendanceService) {
+    public AttendanceHistoryPanel(int classId, AttendanceService attendanceService, AuthService authService) {
         this.classId = classId;
         this.attendanceService = attendanceService;
         this.studentDAO = new StudentDAO();
+        role = authService.getCurrentUser().getRole();
         
         initializeComponents();
         layoutComponents();
@@ -55,17 +70,33 @@ public class AttendanceHistoryPanel extends JPanel {
     }
     
     // Convenience constructor that creates its own AttendanceService
-    public AttendanceHistoryPanel(int classId) {
-        this(classId, new AttendanceService());
+    public AttendanceHistoryPanel(int classId, AuthService authServic) {
+        this(classId, new AttendanceService(), authServic);
     }
     
     private void initializeComponents() {
+        switch (role) {
+            case "PRINCIPAL":
+                throw new IllegalArgumentException("This panel is not available for PRINCIPAL role");
+            case "TEACHER":
+                BACKGROUND_COLOR = AppColor.getColor("softViolet");
+                BORDER_COLOR = AppColor.getColor("darkViolet");
+                break;
+            case "PARENT":
+                BACKGROUND_COLOR = AppColor.getColor("culture");
+                BORDER_COLOR = AppColor.getColor("darkGreen");
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown user role: " + role);
+        }
         setLayout(new BorderLayout());
+        setOpaque(false);
         setBorder(BorderFactory.createTitledBorder("Attendance History & Statistics"));
         
         // Title
         titleLabel = new JLabel("Attendance History", JLabel.CENTER);
-        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        titleLabel.setFont(getFont().deriveFont(Font.BOLD, 16f));
+        // titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
         
         // Student selection
         studentCombo = new JComboBox<>();
@@ -99,6 +130,23 @@ public class AttendanceHistoryPanel extends JPanel {
         historyTable = new JTable(tableModel);
         historyTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         historyTable.setRowHeight(25);
+        historyTable.setOpaque(false);
+        historyTable.setBackground(new Color(0, 0, 0, 0)); // trong suốt
+        historyTable.setShowGrid(false); 
+        JTableHeader header = historyTable.getTableHeader();
+            header.setDefaultRenderer(new TableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value,
+                                                               boolean isSelected, boolean hasFocus,
+                                                               int row, int column) {
+                    JLabel label = new JLabel(value.toString(), SwingConstants.CENTER);
+                    label.setOpaque(true);
+                    label.setBackground(BACKGROUND_COLOR); 
+                    label.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 2, true)); // bo tròn
+                    label.setFont(label.getFont().deriveFont(Font.BOLD));
+                    return label;
+                }
+            });
         
         // Set up custom renderer for status column
         setupTableColumns();
@@ -113,11 +161,14 @@ public class AttendanceHistoryPanel extends JPanel {
         historyTable.getColumnModel().getColumn(6).setPreferredWidth(80);  // Images
         
         tableScrollPane = new JScrollPane(historyTable);
+        tableScrollPane.setOpaque(false);
+        tableScrollPane.getViewport().setBackground(BACKGROUND_COLOR);
         tableScrollPane.setPreferredSize(new Dimension(600, 300));
         
         // Stats label
         statsLabel = new JLabel("Select a student and date range to view statistics", JLabel.CENTER);
-        statsLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        statsLabel.setFont(getFont().deriveFont(Font.PLAIN, 12f));
+        statsLabel.setForeground(BORDER_COLOR);
         statsLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
     }
     
@@ -135,9 +186,11 @@ public class AttendanceHistoryPanel extends JPanel {
         JPanel titlePanel = new JPanel(new BorderLayout());
         titlePanel.add(titleLabel, BorderLayout.CENTER);
         titlePanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        titlePanel.setOpaque(false);
         
         // Search criteria panel
         JPanel searchPanel = new JPanel(new GridBagLayout());
+        searchPanel.setOpaque(false);
         searchPanel.setBorder(BorderFactory.createTitledBorder("Search Criteria"));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
@@ -146,12 +199,14 @@ public class AttendanceHistoryPanel extends JPanel {
         gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
         searchPanel.add(new JLabel("Student:"), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        gbc.gridwidth = 3;
         searchPanel.add(studentCombo, gbc);
         
         // Date range
+        gbc.gridwidth = 1;
         gbc.gridx = 0; gbc.gridy = 1; gbc.anchor = GridBagConstraints.WEST; gbc.weightx = 0; gbc.fill = GridBagConstraints.NONE;
         searchPanel.add(new JLabel("From:"), gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 0.3;
+        gbc.gridx = 1; gbc.gridy = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 0.3;
         searchPanel.add(startDateSpinner, gbc);
         
         gbc.gridx = 2; gbc.anchor = GridBagConstraints.WEST; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
@@ -167,11 +222,13 @@ public class AttendanceHistoryPanel extends JPanel {
         
         // Stats panel
         JPanel statsPanel = new JPanel(new BorderLayout());
+        statsPanel.setOpaque(false);
         statsPanel.setBorder(BorderFactory.createTitledBorder("Statistics"));
         statsPanel.add(statsLabel, BorderLayout.CENTER);
         
         // Main layout
         JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setOpaque(false);
         topPanel.add(titlePanel, BorderLayout.NORTH);
         topPanel.add(searchPanel, BorderLayout.CENTER);
         
@@ -210,10 +267,13 @@ public class AttendanceHistoryPanel extends JPanel {
             }
             
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "error", 
                 "Error loading students: " + e.getMessage(),
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
+                CustomMessageDialog.Type.ERROR);
+            // JOptionPane.showMessageDialog(this,
+            //     "Error loading students: " + e.getMessage(),
+            //     "Error",
+            //     JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -236,10 +296,13 @@ public class AttendanceHistoryPanel extends JPanel {
             LocalDate end = endDate.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
             
             if (start.isAfter(end)) {
-                JOptionPane.showMessageDialog(this,
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "error", 
                     "Start date cannot be after end date.",
-                    "Invalid Date Range",
-                    JOptionPane.ERROR_MESSAGE);
+                    CustomMessageDialog.Type.ERROR);
+                // JOptionPane.showMessageDialog(this,
+                //     "Start date cannot be after end date.",
+                //     "Invalid Date Range",
+                //     JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
@@ -298,10 +361,13 @@ public class AttendanceHistoryPanel extends JPanel {
             }
             
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "error", 
                 "Error searching attendance history: " + e.getMessage(),
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
+                CustomMessageDialog.Type.ERROR);
+            // JOptionPane.showMessageDialog(this,
+            //     "Error searching attendance history: " + e.getMessage(),
+            //     "Error",
+            //     JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -394,11 +460,11 @@ public class AttendanceHistoryPanel extends JPanel {
             if (!isSelected) {
                 String status = (String) value;
                 if ("PRESENT".equals(status)) {
-                    c.setBackground(Color.GREEN.brighter());
+                    c.setBackground(AppColor.getColor("lightGreen"));
                 } else if ("ABSENT".equals(status)) {
-                    c.setBackground(Color.RED.brighter());
+                    c.setBackground(AppColor.getColor("lightRed"));
                 } else if ("LATE".equals(status)) {
-                    c.setBackground(Color.YELLOW.brighter());
+                    c.setBackground(AppColor.getColor("lightOrange"));
                 } else {
                     c.setBackground(Color.WHITE);
                 }
@@ -448,7 +514,7 @@ public class AttendanceHistoryPanel extends JPanel {
     // Custom button renderer for images column
     private class ImageButtonRenderer extends JButton implements TableCellRenderer {
         public ImageButtonRenderer() {
-            setOpaque(true);
+            setOpaque(false);
         }
         
         @Override
@@ -467,7 +533,7 @@ public class AttendanceHistoryPanel extends JPanel {
         public ImageButtonEditor() {
             super(new JCheckBox());
             button = new JButton("View");
-            button.setOpaque(true);
+            button.setOpaque(false);
             button.addActionListener(e -> showAttendanceImages(selectedRow));
         }
         
@@ -495,69 +561,50 @@ public class AttendanceHistoryPanel extends JPanel {
                 "Attendance Images - " + attendance.getStudentName() + " (" + 
                 attendance.getDate().format(dateFormatter) + ")", true);
             imageDialog.setLayout(new BorderLayout());
+            imageDialog.setBackground(BACKGROUND_COLOR);
             
             JPanel imagePanel = new JPanel(new GridLayout(1, 2, 10, 10));
             imagePanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            imagePanel.setOpaque(false);
             
             // Check-in image section
             JPanel checkInPanel = new JPanel(new BorderLayout());
             checkInPanel.setBorder(BorderFactory.createTitledBorder("Check-in Image"));
-            
-            JButton viewCheckInBtn = new JButton("View Check-in Image");
-            JLabel checkInStatusLabel = new JLabel("", JLabel.CENTER);
-            
-            viewCheckInBtn.addActionListener(e -> {
-                if (attendance.getCheckInImage() != null) {
-                    ImageViewerUtil.showImage(imageDialog, attendance.getCheckInImage(), 
-                        "Check-in Image - " + attendance.getStudentName() + " (" + 
-                        attendance.getDate().format(dateFormatter) + ")");
-                } else {
-                    JOptionPane.showMessageDialog(imageDialog, "No check-in image available", 
-                        "Information", JOptionPane.INFORMATION_MESSAGE);
-                }
-            });
-            
-            // Set status label
+
             if (attendance.getCheckInImage() != null) {
-                checkInStatusLabel.setText("Image available");
-                checkInStatusLabel.setForeground(Color.GREEN.darker());
+                byte[] imageData = (byte[]) attendance.getCheckInImage();
+                ImageIcon profileImage = ProfileImageUtil.loadProfileImageFromBytes(imageData, 200, 200);
+                JLabel imageLabel = new JLabel(profileImage);
+                imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                checkInPanel.add(imageLabel, BorderLayout.CENTER);
+                
             } else {
-                checkInStatusLabel.setText("No image");
-                checkInStatusLabel.setForeground(Color.RED);
+                ImageIcon icon = new ImageIcon(getClass().getResource("/images/" + role + "/photo.png"));
+                Image img = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                JLabel imageLabel = new JLabel(new ImageIcon(img));
+                imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                checkInPanel.add(imageLabel, BorderLayout.CENTER);
             }
-            
-            checkInPanel.add(viewCheckInBtn, BorderLayout.CENTER);
-            checkInPanel.add(checkInStatusLabel, BorderLayout.SOUTH);
             
             // Check-out image section
             JPanel checkOutPanel = new JPanel(new BorderLayout());
             checkOutPanel.setBorder(BorderFactory.createTitledBorder("Check-out Image"));
-            
-            JButton viewCheckOutBtn = new JButton("View Check-out Image");
-            JLabel checkOutStatusLabel = new JLabel("", JLabel.CENTER);
-            
-            viewCheckOutBtn.addActionListener(e -> {
-                if (attendance.getCheckOutImage() != null) {
-                    ImageViewerUtil.showImage(imageDialog, attendance.getCheckOutImage(), 
-                        "Check-out Image - " + attendance.getStudentName() + " (" + 
-                        attendance.getDate().format(dateFormatter) + ")");
-                } else {
-                    JOptionPane.showMessageDialog(imageDialog, "No check-out image available", 
-                        "Information", JOptionPane.INFORMATION_MESSAGE);
-                }
-            });
-            
-            // Set status label
-            if (attendance.getCheckOutImage() != null) {
-                checkOutStatusLabel.setText("Image available");
-                checkOutStatusLabel.setForeground(Color.GREEN.darker());
+            if (attendance.getCheckInImage() != null) {
+                byte[] imageData = (byte[]) attendance.getCheckOutImage();
+                ImageIcon profileImage = ProfileImageUtil.loadProfileImageFromBytes(imageData, 200, 200);
+                JLabel imageLabel = new JLabel(profileImage);
+                imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                checkOutPanel.add(imageLabel, BorderLayout.CENTER);
+                
             } else {
-                checkOutStatusLabel.setText("No image");
-                checkOutStatusLabel.setForeground(Color.RED);
+                ImageIcon icon = new ImageIcon(getClass().getResource("/images/" + role + "/photo.png"));
+                Image img = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                JLabel imageLabel = new JLabel(new ImageIcon(img));
+                imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                checkOutPanel.add(imageLabel, BorderLayout.CENTER);
             }
-            
-            checkOutPanel.add(viewCheckOutBtn, BorderLayout.CENTER);
-            checkOutPanel.add(checkOutStatusLabel, BorderLayout.SOUTH);
+            checkInPanel.setOpaque(false);
+            checkOutPanel.setOpaque(false);
             
             imagePanel.add(checkInPanel);
             imagePanel.add(checkOutPanel);
@@ -567,7 +614,7 @@ public class AttendanceHistoryPanel extends JPanel {
             infoPanel.setBorder(BorderFactory.createTitledBorder("Attendance Information"));
             
             String infoText = String.format(
-                "Student: %s | Date: %s | Status: %s | Check-in: %s | Check-out: %s",
+                "<html>Student: %s<br/>Date: %s<br/>Status: %s<br/>Check-in: %s<br/>Check-out: %s</html>",
                 attendance.getStudentName(),
                 attendance.getDate().format(dateFormatter),
                 attendance.getStatus(),
@@ -578,21 +625,25 @@ public class AttendanceHistoryPanel extends JPanel {
             );
             
             JLabel infoLabel = new JLabel(infoText);
-            infoLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+            infoLabel.setFont(getFont().deriveFont(Font.PLAIN, 12f));
             infoPanel.add(infoLabel);
+            infoPanel.setOpaque(false);
             
             // Close button
-            JButton closeBtn = new JButton("Close");
+            // JButton closeBtn = new JButton("Close");
+            CustomButton closeBtn = new CustomButton("Close", "TEACHER".equals(role) ? accountType.TEACHER : accountType.PARENT);
             closeBtn.addActionListener(e -> imageDialog.dispose());
             JPanel closePanel = new JPanel(new FlowLayout());
             closePanel.add(closeBtn);
+            closePanel.setOpaque(false);
             
             imageDialog.add(infoPanel, BorderLayout.NORTH);
             imageDialog.add(imagePanel, BorderLayout.CENTER);
             imageDialog.add(closePanel, BorderLayout.SOUTH);
             
-            imageDialog.setSize(600, 350);
+            imageDialog.setSize(600, 450);
             imageDialog.setLocationRelativeTo(this);
+            imageDialog.setBackground(BACKGROUND_COLOR);
             imageDialog.setVisible(true);
         }
     }

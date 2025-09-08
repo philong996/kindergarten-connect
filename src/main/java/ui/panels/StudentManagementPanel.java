@@ -29,7 +29,7 @@ public class StudentManagementPanel extends JPanel {
     private DataTable studentTable;
     private SearchPanel searchPanel;
     private FormBuilder formBuilder;
-    private ButtonPanel1 buttonPanel;
+    private ButtonPanel buttonPanel;
     
     // Form field IDs
     private static final String FIELD_NAME = "name";
@@ -76,7 +76,7 @@ public class StudentManagementPanel extends JPanel {
         loadAvailableClasses();
         
         // Create button panel
-        buttonPanel = ButtonPanel1.createCrudPanel(
+        buttonPanel = ButtonPanel.createCrudPanel(
             e -> addStudent(),
             e -> updateStudent(), 
             e -> deleteStudent(),
@@ -228,14 +228,17 @@ public class StudentManagementPanel extends JPanel {
             
             boolean success = studentService.addStudent(student);
             if (success) {
-                DialogFactory.showSuccess(this, "Student added successfully!");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "Student added successfully!", CustomMessageDialog.Type.SUCCESS);
+                // DialogFactory.showSuccess(this, "Student added successfully!");
                 loadStudentData();
                 clearForm();
             } else {
-                DialogFactory.showError(this, "Failed to add student.");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Error", "Failed to add student.", CustomMessageDialog.Type.ERROR);
+                // DialogFactory.showError(this, "Failed to add student.");
             }
         } catch (Exception e) {
-            DialogFactory.showError(this, "Error adding student: " + e.getMessage());
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Error", "Error adding student: " + e.getMessage(), CustomMessageDialog.Type.ERROR);
+            // DialogFactory.showError(this, "Error adding student: " + e.getMessage());
         }
     }
     
@@ -245,7 +248,8 @@ public class StudentManagementPanel extends JPanel {
         }
         
         if (selectedStudent == null) {
-            DialogFactory.showWarning(this, "Please select a student to update.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "Please select a student to update.", CustomMessageDialog.Type.INFO);
+            // DialogFactory.showWarning(this, "Please select a student to update.");
             return;
         }
         
@@ -263,14 +267,17 @@ public class StudentManagementPanel extends JPanel {
             
             boolean success = studentService.updateStudent(updatedStudent);
             if (success) {
-                DialogFactory.showSuccess(this, "Student updated successfully!");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "Student updated successfully!", CustomMessageDialog.Type.SUCCESS);
+                // DialogFactory.showSuccess(this, "Student updated successfully!");
                 loadStudentData();
                 clearForm();
             } else {
-                DialogFactory.showError(this, "Failed to update student.");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Error", "Failed to update student.", CustomMessageDialog.Type.ERROR);
+                // DialogFactory.showError(this, "Failed to update student.");
             }
         } catch (Exception e) {
-            DialogFactory.showError(this, "Error updating student: " + e.getMessage());
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Error", "Error updating student: " + e.getMessage(), CustomMessageDialog.Type.ERROR);
+            // DialogFactory.showError(this, "Error updating student: " + e.getMessage());
         }
     }
     
@@ -280,7 +287,8 @@ public class StudentManagementPanel extends JPanel {
         }
         
         if (selectedStudent == null) {
-            DialogFactory.showWarning(this, "Please select a student to delete.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "Please select a student to delete.", CustomMessageDialog.Type.INFO);
+            // DialogFactory.showWarning(this, "Please select a student to delete.");
             return;
         }
         
@@ -291,14 +299,17 @@ public class StudentManagementPanel extends JPanel {
         try {
             boolean success = studentService.deleteStudent(selectedStudent.getId());
             if (success) {
-                DialogFactory.showSuccess(this, "Student deleted successfully!");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "Student deleted successfully!", CustomMessageDialog.Type.SUCCESS);
+                // DialogFactory.showSuccess(this, "Student deleted successfully!");
                 loadStudentData();
                 clearForm();
             } else {
-                DialogFactory.showError(this, "Failed to delete student.");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Error", "Failed to delete student.", CustomMessageDialog.Type.ERROR);
+                // DialogFactory.showError(this, "Failed to delete student.");
             }
         } catch (Exception e) {
-            DialogFactory.showError(this, "Error deleting student: " + e.getMessage());
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Error", "Error deleting student: " + e.getMessage(), CustomMessageDialog.Type.ERROR);
+            // DialogFactory.showError(this, "Error deleting student: " + e.getMessage());
         }
     }
     

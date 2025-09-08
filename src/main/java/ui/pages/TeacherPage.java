@@ -3,6 +3,7 @@ package ui.pages;
 import service.AuthService;
 import service.StudentService;
 import model.Student;
+import ui.components.AppColor;
 import ui.components.HeaderPanel;
 import ui.panels.PhysicalDevelopmentPanel;
 import ui.panels.AttendancePanel;
@@ -12,6 +13,9 @@ import ui.panels.ChatPanel;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+
 import java.awt.*;
 import java.util.List;
 
@@ -30,6 +34,7 @@ public class TeacherPage extends BaseAuthenticatedPage {
     private static final String TAB_POSTS = "Class Posts";
     private static final String TAB_MESSAGES = "Messages";
     private static final String TAB_PHYSICAL_DEVELOPMENT = "Physical Development";
+    private String currentUserRole;
     
     public TeacherPage(AuthService authService) {
         super(authService);
@@ -42,33 +47,43 @@ public class TeacherPage extends BaseAuthenticatedPage {
     
     @Override
     protected void initializeComponents() {
+        currentUserRole = authService.getCurrentUser().getRole();
         headerPanel = HeaderPanel.createDashboard("Teacher", authService.getCurrentUser().getUsername());
         
         // Create tabbed pane for teacher features
         JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setForeground(AppColor.getColor("drakGreen"));
+        tabbedPane.setBackground(AppColor.getColor("darkViolet"));
         
         // Attendance tab
         JPanel attendanceTab = createAttendanceTab();
+        attendanceTab.setOpaque(false);
         tabbedPane.addTab(TAB_ATTENDANCE, attendanceTab);
         
         // Attendance History tab
         JPanel attendanceHistoryTab = createAttendanceHistoryTab();
+        attendanceHistoryTab.setOpaque(false);
         tabbedPane.addTab(TAB_ATTENDANCE_HISTORY, attendanceHistoryTab);
         
         // Posts tab
         JPanel postsTab = createPostsTab();
+        postsTab.setOpaque(false);
         tabbedPane.addTab(TAB_POSTS, postsTab);
         
         // Messages tab
         JPanel messagesTab = createMessagesTab();
+        messagesTab.setOpaque(false);
         tabbedPane.addTab(TAB_MESSAGES, messagesTab);
         
         // Physical Development tab
         JPanel physicalDevPanel = createPhysicalDevelopmentTab();
+        physicalDevPanel.setOpaque(false);
         tabbedPane.addTab(TAB_PHYSICAL_DEVELOPMENT, physicalDevPanel);
         
         mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
+        // mainPanel.setOpaque(false);
+        mainPanel.setBackground(AppColor.getColor("lightViolet"));
     }
     
     private JPanel createAttendanceTab() {
@@ -78,9 +93,10 @@ public class TeacherPage extends BaseAuthenticatedPage {
         int classId = 1; // This should be retrieved from the teacher's profile
         int teacherId = authService.getCurrentUser().getId();
         
-        AttendancePanel attendancePanel = new AttendancePanel(classId, teacherId);
+        AttendancePanel attendancePanel = new AttendancePanel(classId, teacherId, authService);
         
         JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
         panel.add(attendancePanel, BorderLayout.CENTER);
         
         return panel;
@@ -90,9 +106,10 @@ public class TeacherPage extends BaseAuthenticatedPage {
         // For attendance history, we need to get the teacher's class ID
         int classId = 1; // This should be retrieved from the teacher's profile
         
-        AttendanceHistoryPanel historyPanel = new AttendanceHistoryPanel(classId);
-        
+        AttendanceHistoryPanel historyPanel = new AttendanceHistoryPanel(classId, authService);
+        historyPanel.setOpaque(false);
         JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
         panel.add(historyPanel, BorderLayout.CENTER);
         
         return panel;
@@ -100,11 +117,10 @@ public class TeacherPage extends BaseAuthenticatedPage {
     
     private JPanel createPostsTab() {
         int currentUserId = authService.getCurrentUser().getId();
-        String currentUserRole = authService.getCurrentUser().getRole();
-        
         PostsPanel postsPanel = new PostsPanel(currentUserId, currentUserRole, authService);
         
         JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
         panel.add(postsPanel, BorderLayout.CENTER);
         
         return panel;
@@ -112,8 +128,6 @@ public class TeacherPage extends BaseAuthenticatedPage {
     
     private JPanel createMessagesTab() {
         int currentUserId = authService.getCurrentUser().getId();
-        String currentUserRole = authService.getCurrentUser().getRole();
-        
         ChatPanel chatPanel = new ChatPanel(currentUserId, currentUserRole, authService);
         
         JPanel panel = new JPanel(new BorderLayout());
@@ -124,17 +138,21 @@ public class TeacherPage extends BaseAuthenticatedPage {
     
     private JPanel createPhysicalDevelopmentTab() {
         JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
         
         // Create main split pane
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setResizeWeight(0.5); // Equal split
+        splitPane.setOpaque(false);
         
         // Left panel: Student list table
         JPanel leftPanel = createStudentListPanel();
+        leftPanel.setOpaque(false);
         splitPane.setLeftComponent(leftPanel);
         
         // Right panel: Student details and physical development
         JPanel rightPanel = createStudentDetailsPanel();
+        rightPanel.setOpaque(false);
         splitPane.setRightComponent(rightPanel);
         
         panel.add(splitPane, BorderLayout.CENTER);
@@ -158,7 +176,24 @@ public class TeacherPage extends BaseAuthenticatedPage {
         JTable studentTable = new JTable(tableModel);
         studentTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         studentTable.setRowHeight(25);
-        studentTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+        studentTable.getTableHeader().setFont(studentTable.getTableHeader().getFont().deriveFont(Font.BOLD, 12f));
+        studentTable.setBackground(new Color(0, 0, 0, 0)); // trong suốt
+        studentTable.setShowGrid(false); 
+
+        JTableHeader header = studentTable.getTableHeader();
+            header.setDefaultRenderer(new TableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value,
+                                                               boolean isSelected, boolean hasFocus,
+                                                               int row, int column) {
+                    JLabel label = new JLabel(value.toString(), SwingConstants.CENTER);
+                    label.setOpaque(true);
+                    label.setBackground(AppColor.getColor("softViolet")); // 
+                    label.setBorder(BorderFactory.createLineBorder(AppColor.getColor("darkViolet"), 2, true)); // bo tròn
+                    label.setFont(label.getFont().deriveFont(Font.BOLD));
+                    return label;
+                }
+            });;
         
         // Load student data
         loadStudentTableData(tableModel);
@@ -170,27 +205,32 @@ public class TeacherPage extends BaseAuthenticatedPage {
                 if (selectedRow >= 0) {
                     int studentId = (Integer) tableModel.getValueAt(selectedRow, 0);
                     String studentName = (String) tableModel.getValueAt(selectedRow, 1);
+                    String className = (String) tableModel.getValueAt(selectedRow, 3);
                     System.out.println("Student selected: ID=" + studentId + ", Name=" + studentName);
-                    showStudentDetails(studentId, studentName);
+                    showStudentDetails(studentId, studentName, className);
                 }
             }
         });
         
         JScrollPane scrollPane = new JScrollPane(studentTable);
         scrollPane.setPreferredSize(new Dimension(300, 400));
+        scrollPane.getViewport().setBackground(AppColor.getColor("softViolet")); 
+        scrollPane.setBorder(BorderFactory.createLineBorder(AppColor.getColor("darkViolet"), 2, true)); // bo tròn
         panel.add(scrollPane, BorderLayout.CENTER);
+        panel.setOpaque(false);
         
         return panel;
     }
     
     private JPanel createStudentDetailsPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Student Details"));
+        // panel.setBorder(BorderFactory.createTitledBorder());
         
         // Initial placeholder
         JLabel placeholderLabel = new JLabel("Select a student to view details", SwingConstants.CENTER);
-        placeholderLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+        placeholderLabel.setFont(placeholderLabel.getFont().deriveFont(Font.ITALIC, 14f));
         panel.add(placeholderLabel, BorderLayout.CENTER);
+        panel.setOpaque(false);
         
         return panel;
     }
@@ -219,7 +259,7 @@ public class TeacherPage extends BaseAuthenticatedPage {
         }
     }
     
-    private void showStudentDetails(int studentId, String studentName) {
+    private void showStudentDetails(int studentId, String studentName, String className) {
         // System.out.println("showStudentDetails called for: ID=" + studentId + ", Name=" + studentName);
         try {
             StudentService studentService = new StudentService();
@@ -232,11 +272,12 @@ public class TeacherPage extends BaseAuthenticatedPage {
             
             // Create detailed student information panel
             JPanel detailsPanel = new JPanel(new BorderLayout());
-            detailsPanel.setBorder(BorderFactory.createTitledBorder("Student Details"));
+            // detailsPanel.setBorder(BorderFactory.createTitledBorder("Student Details"));
+            detailsPanel.setOpaque(false);
             
             // Student information section
             JPanel infoPanel = createStudentInfoPanel(student);
-            detailsPanel.add(infoPanel, BorderLayout.NORTH);
+            // detailsPanel.add(infoPanel, BorderLayout.NORTH);
             
             // Physical development section
             JPanel physicalPanel = new JPanel(new BorderLayout());
@@ -246,12 +287,12 @@ public class TeacherPage extends BaseAuthenticatedPage {
             // Get gender from student data - convert from MALE/FEMALE to boolean (true for boy)
             boolean isBoy = student.isMale(); // Use the new helper method
             PhysicalDevelopmentPanel physicalDevPanel = new PhysicalDevelopmentPanel(
-                studentId, studentName, isBoy, authService.getCurrentUser().getId(), true
+                studentId, studentName, className, isBoy, authService.getCurrentUser().getId(), true
             );
             // System.out.println("Physical development panel created for student: " + studentName);
-            physicalPanel.add(physicalDevPanel, BorderLayout.CENTER);
-            
-            detailsPanel.add(physicalPanel, BorderLayout.CENTER);
+            // physicalPanel.add(physicalDevPanel, BorderLayout.CENTER);
+            detailsPanel.add(physicalDevPanel, BorderLayout.CENTER);
+            // detailsPanel.add(physicalPanel, BorderLayout.CENTER);
             
             // Update the right panel
             Component[] components = mainPanel.getComponents();
