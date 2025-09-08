@@ -172,7 +172,7 @@ public class UserService {
      * Get all users with school names for UI display
      */
     public List<User> getAllUsersWithSchoolNames() {
-        return userDAO.findAllWithSchoolNames();
+        return userDAO.findAllWithSchoolNamesAndChildren();
     }
     
     /**

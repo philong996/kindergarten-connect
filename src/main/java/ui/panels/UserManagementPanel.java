@@ -63,7 +63,7 @@ public class UserManagementPanel extends JPanel {
         searchPanel.setOpaque(false);
         
         // Create data table
-        String[] columnNames = {"ID", "Username", "Role", "School", "Created At"};
+        String[] columnNames = {"ID", "Username", "Role", "School", "Child Name", "Created At"};
         userTable = new DataTable(columnNames);
         userTable.setRowSelectionHandler(this::onRowSelected);
         userTable.setOpaque(false);
@@ -276,6 +276,7 @@ public class UserManagementPanel extends JPanel {
                 user.getUsername(),
                 user.getRole(),
                 user.getSchoolName() != null ? user.getSchoolName() : "Unknown School",
+                user.getChildName() != null ? user.getChildName() : (user.isParent() ? "No Child Assigned" : "N/A"),
                 user.getCreatedAt() != null ? user.getCreatedAt().toString() : ""
             };
             userTable.addRow(rowData);

@@ -326,6 +326,48 @@ public class UserDAO {
     }
     
     /**
+     * Get all users with school names and child names (for parent users) for UI display
+     */
+    public List<User> findAllWithSchoolNamesAndChildren() {
+        List<User> users = new ArrayList<>();
+        String sql = """
+            SELECT u.*, s.name as school_name, 
+                   CASE 
+                       WHEN u.role = 'PARENT' THEN st.name
+                       ELSE NULL 
+                   END as child_name
+            FROM users u 
+            LEFT JOIN schools s ON u.school_id = s.id 
+            LEFT JOIN parents p ON u.id = p.user_id AND u.role = 'PARENT'
+            LEFT JOIN students st ON p.student_id = st.id
+            ORDER BY u.role, u.username
+            """;
+        
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                User user = mapResultSetToUser(rs);
+                // Set school name if available
+                String schoolName = rs.getString("school_name");
+                if (schoolName != null) {
+                    user.setSchoolName(schoolName);
+                }
+                // Set child name if available (for parent users)
+                String childName = rs.getString("child_name");
+                if (childName != null) {
+                    user.setChildName(childName);
+                }
+                users.add(user);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error finding all users with school names and children: " + e.getMessage());
+        }
+        return users;
+    }
+    
+    /**
      * Get all schools for dropdown options
      */
     public List<Object[]> findAllSchools() {
