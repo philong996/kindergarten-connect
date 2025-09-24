@@ -7,6 +7,7 @@ import service.AuthService;
 import service.AuthorizationService;
 import service.PostService;
 import ui.components.*;
+import ui.components.CustomButton.accountType;
 import util.AuthUtil;
 
 import javax.swing.*;
@@ -57,6 +58,10 @@ public class PostsPanel extends JPanel {
     // Selected items
     private byte[] selectedImageData;
     private String selectedImageFilename;
+
+    // Color constants
+    private static Color BACKGROUND_COLOR;
+    private static Color BORDER_COLOR;
     
     public PostsPanel(int currentUserId, String currentUserRole, AuthService authService) {
         this.currentUserId = currentUserId;
@@ -71,6 +76,22 @@ public class PostsPanel extends JPanel {
         System.out.println("User ID: " + currentUserId);
         System.out.println("User Role: " + currentUserRole);
         System.out.println("Auth Service: " + (authService != null ? "Available" : "NULL"));
+
+        // Set colors based on role
+        switch (currentUserRole) {
+            case "PRINCIPAL":
+                throw new IllegalArgumentException("This panel is not available for PRINCIPAL role");
+            case "TEACHER":
+                BACKGROUND_COLOR = AppColor.getColor("softViolet");
+                BORDER_COLOR = AppColor.getColor("darkViolet");
+                break;
+            case "PARENT":
+                BACKGROUND_COLOR = AppColor.getColor("culture");
+                BORDER_COLOR = AppColor.getColor("darkGreen");
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown user role: " + currentUserRole);
+        }
         
         initializeComponents();
         setupLayout();
@@ -81,24 +102,29 @@ public class PostsPanel extends JPanel {
     }
     
     private void initializeComponents() {
+        setOpaque(false);
         mainTabbedPane = new JTabbedPane();
         
         // Initialize containers for card layout
         classActivitiesContainer = new JPanel();
         classActivitiesContainer.setLayout(new BoxLayout(classActivitiesContainer, BoxLayout.Y_AXIS));
-        classActivitiesContainer.setBackground(Color.WHITE);
+        // classActivitiesContainer.setBackground(Color.WHITE);
+        classActivitiesContainer.setOpaque(false);
         
         schoolAnnouncementsContainer = new JPanel();
         schoolAnnouncementsContainer.setLayout(new BoxLayout(schoolAnnouncementsContainer, BoxLayout.Y_AXIS));
-        schoolAnnouncementsContainer.setBackground(Color.WHITE);
+        // schoolAnnouncementsContainer.setBackground(Color.WHITE);
+        schoolAnnouncementsContainer.setOpaque(false);
         
         // Create scroll panes
         classActivitiesScrollPane = new JScrollPane(classActivitiesContainer);
+        classActivitiesScrollPane.setOpaque(false);
         classActivitiesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         classActivitiesScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         classActivitiesScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         
         announcementsScrollPane = new JScrollPane(schoolAnnouncementsContainer);
+        announcementsScrollPane.setOpaque(false);
         announcementsScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         announcementsScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         announcementsScrollPane.getVerticalScrollBar().setUnitIncrement(16);
@@ -106,16 +132,20 @@ public class PostsPanel extends JPanel {
     
     private void setupLayout() {
         setLayout(new BorderLayout());
-        
+        setOpaque(false);
         // Create tabs
         JPanel classActivitiesTab = createPostTab(classActivitiesScrollPane, "Class Activities");
         JPanel announcementsTab = createPostTab(announcementsScrollPane, "School Announcements");
-        
-        mainTabbedPane.addTab("📚 Class Activities", classActivitiesTab);
+        classActivitiesTab.setOpaque(false);
+        announcementsTab.setOpaque(false);
+
+        ImageIcon classIcon   = loadScaledIcon("/images/" + currentUserRole + "/classPost.png", 20, 20);
+        ImageIcon annouIcon   = loadScaledIcon("/images/" + currentUserRole + "/announcement.png", 20, 20);
+        mainTabbedPane.addTab("Class Activities", classIcon, classActivitiesTab);
         
         // Only show announcements tab for principals or if there are announcements to view
         if ("PRINCIPAL".equals(currentUserRole) || canViewAnnouncements()) {
-            mainTabbedPane.addTab("📢 School Announcements", announcementsTab);
+            mainTabbedPane.addTab("School Announcements", annouIcon, announcementsTab);
         }
         
         add(mainTabbedPane, BorderLayout.CENTER);
@@ -125,17 +155,21 @@ public class PostsPanel extends JPanel {
         System.out.println("Creating tab: " + title + " for user role: " + currentUserRole);
         
         JPanel tabPanel = new JPanel(new BorderLayout());
+        tabPanel.setOpaque(false);
         
         // Header with title and controls
         JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        headerPanel.add(new JLabel("<html><h2>" + title + "</h2></html>"));
+        tabPanel.setBorder(BorderFactory.createTitledBorder(title));
+        headerPanel.setOpaque(false);
         
         if ("TEACHER".equals(currentUserRole) || "PRINCIPAL".equals(currentUserRole)) {
-            JButton createPostButton = new JButton("➕ Create New Post");
+            ImageIcon plusIcon = loadScaledIcon("/images/plus.png", 15, 15);
+            JButton createPostButton = new JButton("Create New Post", plusIcon);
             createPostButton.addActionListener(e -> showCreatePostDialog(title));
             headerPanel.add(createPostButton);
             
-            JButton refreshButton = new JButton("🔄 Refresh");
+            ImageIcon refreshIcon = loadScaledIcon("/images/" + currentUserRole + "/refresh.png", 15, 15);
+            JButton refreshButton = new JButton("Refresh", refreshIcon);
             refreshButton.addActionListener(e -> refreshCurrentView());
             headerPanel.add(refreshButton);
         }
@@ -276,19 +310,20 @@ public class PostsPanel extends JPanel {
     private JPanel createPostCard(Post post) {
         JPanel card = new JPanel(new BorderLayout());
         card.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+            BorderFactory.createLineBorder(BORDER_COLOR, 1),
+            BorderFactory.createEmptyBorder(5, 5, 5, 5)
         ));
-        card.setBackground(Color.WHITE);
+        card.setBackground(BACKGROUND_COLOR);
         
         // Dynamic card sizing based on content
         boolean hasImage = post.getPhotoAttachment() != null && post.getPhotoAttachment().length > 0;
         int baseHeight = hasImage ? 500 : 250; // Larger height for posts with images
         
         // Set preferred and maximum size for proper display
-        card.setPreferredSize(new Dimension(600, baseHeight));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, hasImage ? 800 : 400)); // Much larger max for images
-        card.setMinimumSize(new Dimension(400, baseHeight));
+
+        // card.setPreferredSize(new Dimension(600, baseHeight));
+        // card.setMaximumSize(new Dimension(Integer.MAX_VALUE, hasImage ? 800 : 400)); // Much larger max for images
+        // card.setMinimumSize(new Dimension(400, baseHeight));
         
         // Header with title and metadata
         JPanel headerPanel = createPostHeader(post);
@@ -307,13 +342,16 @@ public class PostsPanel extends JPanel {
     
     private JPanel createPostHeader(Post post) {
         JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
         
         // Title and pin indicator
         String titleText = post.getTitle();
         if (post.isPinned()) {
             titleText = "📌 " + titleText;
         }
-        JLabel titleLabel = new JLabel("<html><h3>" + titleText + "</h3></html>");
+        // JLabel titleLabel = new JLabel("<html><h3>" + titleText + "</h3></html>");
+        JLabel titleLabel = new JLabel(titleText);
+        titleLabel.setFont(new Font("Tahoma", Font.BOLD, 16));
         header.add(titleLabel, BorderLayout.WEST);
         
         // Metadata panel
@@ -355,6 +393,7 @@ public class PostsPanel extends JPanel {
     private JPanel createPostContent(Post post) {
         JPanel content = new JPanel(new BorderLayout());
         content.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        content.setOpaque(false);
         
         // Check if post has image for layout decisions
         boolean hasImage = post.getPhotoAttachment() != null && post.getPhotoAttachment().length > 0;
@@ -363,13 +402,17 @@ public class PostsPanel extends JPanel {
         JPanel mainContent = new JPanel(new BorderLayout());
         
         // Main content with proper text wrapping
+        AutoResizeTextArea textArea = new AutoResizeTextArea(post.getContent(),10);
+        textArea.setOpaque(false);
+        textArea.setForeground(Color.BLACK);
+        content.add(textArea, BorderLayout.CENTER);
         JTextArea contentArea = new JTextArea(post.getContent());
-        contentArea.setEditable(false);
-        contentArea.setWrapStyleWord(true);
-        contentArea.setLineWrap(true);
+        // contentArea.setEditable(false);
+        // contentArea.setWrapStyleWord(true);
+        // contentArea.setLineWrap(true);
         contentArea.setOpaque(false);
-        contentArea.setFont(contentArea.getFont().deriveFont(14f)); // Slightly larger font
-        contentArea.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        contentArea.setFont(new Font("Tahoma", Font.PLAIN, 14)); // Slightly larger font
+        // contentArea.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         
         // Adjust text area size based on image presence
         if (hasImage) {
@@ -395,10 +438,11 @@ public class PostsPanel extends JPanel {
         if (hasImage) {
             JPanel imagePanel = createImagePanel(post.getPhotoAttachment());
             if (imagePanel != null) {
+                imagePanel.setOpaque(false);
                 mainContent.add(imagePanel, BorderLayout.CENTER);
             }
         }
-        
+        mainContent.setOpaque(false);
         content.add(mainContent, BorderLayout.CENTER);
         
         // Metadata row with better spacing
@@ -406,25 +450,28 @@ public class PostsPanel extends JPanel {
         metaRow.setOpaque(false);
         
         // Create colored labels for metadata
-        JLabel dateLabel = createMetaLabel("📅 " + (post.getCreatedAt() != null ? 
-                              post.getCreatedAt().toLocalDate().toString() : "Unknown"), 
-                              new Color(100, 149, 237));
+        JLabel dateLabel = createMetaLabel(
+            post.getCreatedAt() != null ? post.getCreatedAt().toLocalDate().toString() : "Unknown", 
+            "src/main/resources/images/" + currentUserRole + "/calendar.png");
         metaRow.add(dateLabel);
         
         if (post.getEventDate() != null) {
-            JLabel eventLabel = createMetaLabel("🎯 Event: " + post.getEventDate().toString(), 
-                                              new Color(255, 140, 0));
+            JLabel eventLabel = createMetaLabel(
+                "Event: " + post.getEventDate().toString(), 
+                "src/main/resources/images/" + currentUserRole + "/event.png");
             metaRow.add(eventLabel);
         }
         
         if (post.getScheduledDate() != null) {
-            JLabel scheduleLabel = createMetaLabel("⏰ Scheduled: " + post.getScheduledDate().toString(), 
-                                                 new Color(50, 205, 50));
+            JLabel scheduleLabel = createMetaLabel(
+                "Scheduled: " + post.getScheduledDate().toString(), 
+                "src/main/resources/images/" + currentUserRole + "/appointment.png");
             metaRow.add(scheduleLabel);
         }
         
-        JLabel visibilityLabel = createMetaLabel("👁️ " + post.getVisibilityDisplay(), 
-                                               new Color(128, 128, 128));
+        JLabel visibilityLabel = createMetaLabel(
+            post.getVisibilityDisplay(), 
+            "src/main/resources/images/" + currentUserRole + "/eye.png");
         metaRow.add(visibilityLabel);
         
         content.add(metaRow, BorderLayout.SOUTH);
@@ -436,6 +483,7 @@ public class PostsPanel extends JPanel {
      * Create an image panel from byte array data
      */
     private JPanel createImagePanel(byte[] imageData) {
+        setOpaque(false);
         try {
             // Convert byte array to image
             ByteArrayInputStream bis = new ByteArrayInputStream(imageData);
@@ -464,8 +512,8 @@ public class PostsPanel extends JPanel {
             
             // Create panel with image
             JPanel imagePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-            imagePanel.setOpaque(true);
-            imagePanel.setBackground(Color.WHITE);
+            imagePanel.setOpaque(false);
+            // imagePanel.setBackground(Color.WHITE);
             imagePanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
             
             JLabel imageLabel = new JLabel(new ImageIcon(scaledImage));
@@ -497,9 +545,27 @@ public class PostsPanel extends JPanel {
         label.setFont(label.getFont().deriveFont(11f));
         return label;
     }
+
+    private JLabel createMetaLabel(String text,  String iconPath) {
+        JLabel label = new JLabel(text);
+
+        // Nếu có icon, load và scale
+        if (iconPath != null && !iconPath.isEmpty()) {
+            ImageIcon originalIcon = new ImageIcon(iconPath);
+            Image scaledImage = originalIcon.getImage().getScaledInstance(15, 15, Image.SCALE_SMOOTH);
+            label.setIcon(new ImageIcon(scaledImage));
+            label.setHorizontalTextPosition(SwingConstants.RIGHT); // text bên phải icon
+            label.setIconTextGap(5);
+        }
+        label.setForeground(Color.GRAY);
+        label.setFont(label.getFont().deriveFont(11f));
+
+        return label;
+    }
     
     private JPanel createCommentsSection(Post post) {
         JPanel commentsSection = new JPanel(new BorderLayout());
+        commentsSection.setOpaque(false);
         commentsSection.setBorder(BorderFactory.createTitledBorder("Comments"));
         
         // Load and display comments
@@ -517,6 +583,7 @@ public class PostsPanel extends JPanel {
         } else {
             JPanel commentsContainer = new JPanel();
             commentsContainer.setLayout(new BoxLayout(commentsContainer, BoxLayout.Y_AXIS));
+            commentsContainer.setOpaque(false);
             
             for (Comment comment : comments) {
                 JPanel commentPanel = createCommentPanel(comment);
@@ -541,11 +608,13 @@ public class PostsPanel extends JPanel {
     
     private JPanel createCommentPanel(Comment comment) {
         JPanel commentPanel = new JPanel(new BorderLayout());
+        commentPanel.setOpaque(false);
         commentPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         commentPanel.setBackground(new Color(248, 249, 250));
         
         // Comment header with author and date
         JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        headerPanel.setOpaque(false);
         headerPanel.setOpaque(false);
         headerPanel.add(new JLabel("<html><b>" + comment.getAuthorName() + "</b></html>"));
         headerPanel.add(new JLabel("•"));
@@ -558,6 +627,8 @@ public class PostsPanel extends JPanel {
         commentContent.setWrapStyleWord(true);
         commentContent.setLineWrap(true);
         commentContent.setOpaque(false);
+        commentContent.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+        commentContent.setFont(new Font("Tahoma", Font.PLAIN, 13));
         
         commentPanel.add(headerPanel, BorderLayout.NORTH);
         commentPanel.add(commentContent, BorderLayout.CENTER);
@@ -567,6 +638,7 @@ public class PostsPanel extends JPanel {
     
     private JPanel createAddCommentPanel(Post post) {
         JPanel addCommentPanel = new JPanel(new BorderLayout());
+        addCommentPanel.setOpaque(false);
         addCommentPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         
         JTextArea commentTextArea = new JTextArea(2, 0);
@@ -575,7 +647,8 @@ public class PostsPanel extends JPanel {
         commentTextArea.setBorder(BorderFactory.createLoweredBevelBorder());
         commentTextArea.setBackground(Color.WHITE);
         
-        JButton addCommentButton = new JButton("Add Comment");
+        JButton addCommentButton = new CustomButton("Add Comment", "TEACHER".equals(currentUserRole) ? 
+                                                    accountType.TEACHER : accountType.PARENT);  
         addCommentButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -589,10 +662,12 @@ public class PostsPanel extends JPanel {
         });
         
         JPanel inputPanel = new JPanel(new BorderLayout());
+        inputPanel.setOpaque(false);
         inputPanel.add(new JLabel("Add a comment:"), BorderLayout.NORTH);
         inputPanel.add(commentTextArea, BorderLayout.CENTER);
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setOpaque(false);
         buttonPanel.add(addCommentButton);
         
         addCommentPanel.add(inputPanel, BorderLayout.CENTER);
@@ -607,7 +682,10 @@ public class PostsPanel extends JPanel {
             
             boolean success = postService.addApprovedComment(comment);
             if (success) {
-                DialogFactory.showSuccess(this, "Comment added successfully!");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(PostsPanel.this), "succes", 
+                    "Comment added successfully!", 
+                    CustomMessageDialog.Type.SUCCESS);
+                // DialogFactory.showSuccess(this, "Comment added successfully!");
             } else {
                 DialogFactory.showError(this, "Failed to add comment.");
             }
@@ -642,7 +720,7 @@ public class PostsPanel extends JPanel {
             parentFrame, 
             "Create New " + (postType.equals(Post.TYPE_CLASS_ACTIVITY) ? "Class Activity" : "School Announcement"),
             dialogFormBuilder
-        );
+         );
         
         // Check if user clicked OK
         if (dialog.isOkClicked()) {
@@ -651,16 +729,26 @@ public class PostsPanel extends JPanel {
                 
                 boolean success = postService.createPost(post);
                 if (success) {
-                    DialogFactory.showSuccess(this, 
-                        post.isSchoolAnnouncement() ? "Announcement created successfully!" : "Post created successfully!");
-                    refreshCurrentView();
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(PostsPanel.this), "succes", 
+                    post.isSchoolAnnouncement() ? "Announcement created successfully!" : "Post created successfully!", 
+                    CustomMessageDialog.Type.SUCCESS);
+                    // DialogFactory.showSuccess(this, 
+                    //     post.isSchoolAnnouncement() ? "Announcement created successfully!" : "Post created successfully!");
+                    // refreshCurrentView();
                 } else {
-                    DialogFactory.showError(this, "Failed to create post.");
+                    CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(PostsPanel.this), "error", 
+                    "Failed to create post.", 
+                    CustomMessageDialog.Type.ERROR);
+                    // DialogFactory.showError(this, "Failed to create post.");
                 }
             } catch (Exception e) {
-                DialogFactory.showError(this, "Error creating post: " + e.getMessage());
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(PostsPanel.this), "error", 
+                    "Error creating post: " + e.getMessage(), 
+                    CustomMessageDialog.Type.ERROR);
+                // DialogFactory.showError(this, "Error creating post: " + e.getMessage());
             }
         }
+
     }
     
     private void refreshCurrentView() {
@@ -710,7 +798,7 @@ public class PostsPanel extends JPanel {
         
         System.out.println("Creating FormBuilder for tab: " + tabTitle + ", postType: " + postType);
         
-        FormBuilder formBuilder = new FormBuilder("Create New Post", 2);
+        FormBuilder formBuilder = new FormBuilder("Create New Post", 1);
         formBuilder.addTextField(FIELD_TITLE, "Title", true)
                   .addTextArea(FIELD_CONTENT, "Content", 4, true);
         
@@ -725,13 +813,12 @@ public class PostsPanel extends JPanel {
         } else {
             formBuilder.addComboBox(FIELD_CATEGORY, "Category", 
                                  new String[]{"GENERAL", "EVENT", "HOLIDAY", "SCHEDULE"}, true)
-                      .addDateField(FIELD_EVENT_DATE, "Event Date (optional)", false);
+                      .addDateField(FIELD_EVENT_DATE, "Event Date", false);
         }
         
         formBuilder.addComboBox(FIELD_VISIBILITY, "Visibility", 
                              new String[]{"ALL", "PARENTS_ONLY", "TEACHERS_ONLY"}, true)
-                  .addDateField(FIELD_SCHEDULED_DATE, "Scheduled Date (optional)", false);
-        
+                  .addDateField(FIELD_SCHEDULED_DATE, "Scheduled Date", false);
         return formBuilder;
     }
     
@@ -909,5 +996,11 @@ public class PostsPanel extends JPanel {
         }
         
         return post;
+    }
+
+    private ImageIcon loadScaledIcon(String path, int w, int h) {
+        ImageIcon icon = new ImageIcon(getClass().getResource(path));
+        Image img = icon.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
+        return new ImageIcon(img);
     }
 }

@@ -20,7 +20,7 @@ public class ClassManagementPanel extends JPanel {
     private DataTable classTable;
     private SearchPanel searchPanel;
     private FormBuilder formBuilder;
-    private ButtonPanel1 buttonPanel;
+    private ButtonPanel buttonPanel;
     private JPanel statisticsPanel;
     
     // Form field IDs
@@ -73,7 +73,7 @@ public class ClassManagementPanel extends JPanel {
         formBuilder.setValue(FIELD_CAPACITY, String.valueOf(ClassService.DEFAULT_CAPACITY));
         
         // Create button panel
-        buttonPanel = ButtonPanel1.createCrudPanel(
+        buttonPanel = ButtonPanel.createCrudPanel(
             e -> addClass(),
             e -> updateClass(),
             e -> deleteClass(),
@@ -255,7 +255,8 @@ public class ClassManagementPanel extends JPanel {
             
             boolean success = classService.addClass(clazz);
             if (success) {
-                DialogFactory.showSuccess(this, "Class added successfully!");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "Class added successfully!", CustomMessageDialog.Type.SUCCESS);
+                // DialogFactory.showSuccess(this, "Class added successfully!");
                 loadClassData();
                 loadAvailableTeachers(); // Refresh teacher list
                 clearForm();
@@ -269,14 +270,14 @@ public class ClassManagementPanel extends JPanel {
     
     private void updateClass() {
         if (selectedClass == null) {
-            DialogFactory.showWarning(this, "Please select a class to update.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "Please select a class to update.", CustomMessageDialog.Type.WARNING);
+            // DialogFactory.showWarning(this, "Please select a class to update.");
             return;
         }
         
         if (!formBuilder.validateRequired()) {
             return;
         }
-        
         if (!DialogFactory.showConfirmation(this, "Are you sure you want to update this class?")) {
             return;
         }
@@ -288,7 +289,8 @@ public class ClassManagementPanel extends JPanel {
             
             boolean success = classService.updateClass(updatedClass);
             if (success) {
-                DialogFactory.showSuccess(this, "Class updated successfully!");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "Class updated successfully!", CustomMessageDialog.Type.SUCCESS);
+                // DialogFactory.showSuccess(this, "Class updated successfully!");
                 loadClassData();
                 clearForm();
             } else {
@@ -301,7 +303,8 @@ public class ClassManagementPanel extends JPanel {
     
     private void deleteClass() {
         if (selectedClass == null) {
-            DialogFactory.showWarning(this, "Please select a class to delete.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "Please select a class to delete.", CustomMessageDialog.Type.INFO);
+            // DialogFactory.showWarning(this, "Please select a class to delete.");
             return;
         }
         
@@ -312,7 +315,8 @@ public class ClassManagementPanel extends JPanel {
         try {
             boolean success = classService.deleteClass(selectedClass.getId());
             if (success) {
-                DialogFactory.showSuccess(this, "Class deleted successfully!");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "Class deleted successfully!", CustomMessageDialog.Type.SUCCESS);
+                // DialogFactory.showSuccess(this, "Class deleted successfully!");
                 loadClassData();
                 loadAvailableTeachers(); // Refresh teacher list
                 clearForm();
@@ -326,13 +330,15 @@ public class ClassManagementPanel extends JPanel {
     
     private void assignTeacher() {
         if (selectedClass == null) {
-            DialogFactory.showWarning(this, "Please select a class first.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "Please select a class first.", CustomMessageDialog.Type.INFO);
+            // DialogFactory.showWarning(this, "Please select a class first.");
             return;
         }
         
         List<Object[]> availableTeachers = classService.getAvailableTeachers();
         if (availableTeachers.isEmpty()) {
-            DialogFactory.showWarning(this, "No available teachers to assign.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "No available teachers to assign.", CustomMessageDialog.Type.ERROR);  
+            // DialogFactory.showWarning(this, "No available teachers to assign.");
             return;
         }
         
@@ -363,7 +369,8 @@ public class ClassManagementPanel extends JPanel {
                 try {
                     boolean success = classService.assignTeacher(selectedClass.getId(), teacherId);
                     if (success) {
-                        DialogFactory.showSuccess(this, "Teacher assigned successfully!");
+                        CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "Teacher assigned successfully!", CustomMessageDialog.Type.SUCCESS);
+                        // DialogFactory.showSuccess(this, "Teacher assigned successfully!");
                         loadClassData();
                         loadAvailableTeachers();
                         clearForm();
@@ -379,12 +386,14 @@ public class ClassManagementPanel extends JPanel {
     
     private void removeTeacher() {
         if (selectedClass == null) {
-            DialogFactory.showWarning(this, "Please select a class first.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "Please select a class first.", CustomMessageDialog.Type.INFO);
+            // DialogFactory.showWarning(this, "Please select a classz first.");
             return;
         }
         
         if (selectedClass.getTeacherId() == null) {
-            DialogFactory.showWarning(this, "This class doesn't have an assigned teacher.");
+            CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Warning", "This class doesn't have an assigned teacher.", CustomMessageDialog.Type.INFO);
+            // DialogFactory.showWarning(this, "This class doesn't have an assigned teacher.");
             return;
         }
         
@@ -396,7 +405,8 @@ public class ClassManagementPanel extends JPanel {
         try {
             boolean success = classService.removeTeacher(selectedClass.getId());
             if (success) {
-                DialogFactory.showSuccess(this, "Teacher removed successfully!");
+                CustomMessageDialog.showMessage((JFrame) SwingUtilities.getWindowAncestor(this), "Success", "Teacher removed successfully!", CustomMessageDialog.Type.SUCCESS);
+                // DialogFactory.showSuccess(this, "Teacher removed successfully!");
                 loadClassData();
                 loadAvailableTeachers();
                 clearForm();
